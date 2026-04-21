@@ -205,6 +205,99 @@
         } catch (e) { console.error('Glossary Error', e); }
     }
 
+    // --- 显示设置配置 ---
+    const defaultDisplaySettings = {
+        fontSize: 13,
+        lineHeight: 1.5,
+        transColor: '#ffffff',
+        origColor: '#b3b3b3',
+        bgColor: '#000000'
+    };
+
+    // 从 localStorage 加载显示设置
+    function loadDisplaySettings() {
+        const saved = localStorage.getItem('displayTextSettings');
+        if (saved) {
+            const settings = JSON.parse(saved);
+            document.getElementById('display-font-size').value = settings.fontSize || defaultDisplaySettings.fontSize;
+            document.getElementById('display-size-value').textContent = settings.fontSize || defaultDisplaySettings.fontSize;
+            document.getElementById('display-line-height').value = settings.lineHeight || defaultDisplaySettings.lineHeight;
+            document.getElementById('display-lh-value').textContent = settings.lineHeight || defaultDisplaySettings.lineHeight;
+            document.getElementById('display-trans-color').value = settings.transColor || defaultDisplaySettings.transColor;
+            document.getElementById('display-orig-color').value = settings.origColor || defaultDisplaySettings.origColor;
+            document.getElementById('display-bg-color').value = settings.bgColor || defaultDisplaySettings.bgColor;
+        }
+    }
+
+    window.updateDisplaySetting = function(key, value) {
+        // 更新显示值
+        if (key === 'fontSize') {
+            document.getElementById('display-size-value').textContent = value;
+        } else if (key === 'lineHeight') {
+            document.getElementById('display-lh-value').textContent = value;
+        }
+
+        // 保存到 localStorage
+        const settings = JSON.parse(localStorage.getItem('displayTextSettings') || '{}');
+        settings[key] = value;
+        localStorage.setItem('displayTextSettings', JSON.stringify(settings));
+    };
+
+    window.resetDisplaySettings = function() {
+        localStorage.removeItem('displayTextSettings');
+        document.getElementById('display-font-size').value = defaultDisplaySettings.fontSize;
+        document.getElementById('display-size-value').textContent = defaultDisplaySettings.fontSize;
+        document.getElementById('display-line-height').value = defaultDisplaySettings.lineHeight;
+        document.getElementById('display-lh-value').textContent = defaultDisplaySettings.lineHeight;
+        document.getElementById('display-trans-color').value = defaultDisplaySettings.transColor;
+        document.getElementById('display-orig-color').value = defaultDisplaySettings.origColor;
+        document.getElementById('display-bg-color').value = defaultDisplaySettings.bgColor;
+    };
+
+    window.previewDisplaySettings = function() {
+        // 在新窗口预览设置效果
+        const settings = JSON.parse(localStorage.getItem('displayTextSettings') || '{}');
+        const params = new URLSearchParams();
+        params.set('fs', settings.fontSize || defaultDisplaySettings.fontSize);
+        params.set('lh', settings.lineHeight || defaultDisplaySettings.lineHeight);
+        params.set('tc', (settings.transColor || defaultDisplaySettings.transColor).replace('#', ''));
+        params.set('bc', (settings.bgColor || defaultDisplaySettings.bgColor).replace('#', ''));
+
+        const previewWindow = window.open('/display?' + params.toString(), 'previewDisplay', 'width=600,height=400');
+
+        // 发送测试文本
+        setTimeout(() => {
+            if (previewWindow && !previewWindow.closed) {
+                previewWindow.postMessage({
+                    type: 'textUpdate',
+                    position: 'top',
+                    text: '这是译文预览效果 / This is translation preview',
+                    isFinal: true
+                }, '*');
+                previewWindow.postMessage({
+                    type: 'textUpdate',
+                    position: 'bottom',
+                    text: 'This is original text preview / 这是原文预览效果',
+                    isFinal: true
+                }, '*');
+            }
+        }, 500);
+    };
+
+    // 应用显示设置到内嵌翻译界面
+    function applyDisplaySettingsToEmbedded() {
+        const settings = JSON.parse(localStorage.getItem('displayTextSettings') || '{}');
+        const root = document.documentElement;
+
+        // 应用 CSS 变量
+        root.style.setProperty('--trans-font-size', (settings.fontSize || defaultDisplaySettings.fontSize) + 'px');
+        root.style.setProperty('--trans-text-color', settings.transColor || defaultDisplaySettings.transColor);
+        root.style.setProperty('--orig-text-color', settings.origColor || defaultDisplaySettings.origColor);
+        root.style.setProperty('--action-bg-color', settings.bgColor || defaultDisplaySettings.bgColor);
+        root.style.setProperty('--line-height', settings.lineHeight || defaultDisplaySettings.lineHeight);
+    }
+
+
     // --- 通道模式和 TTS 配置 ---
     window.onChannelModeChange = function() {
         const mode = document.getElementById('channel-mode').value;
@@ -253,6 +346,9 @@
         // 应用初始状态
         onChannelModeChange();
         onTtsToggle();
+
+        // 加载显示设置
+        loadDisplaySettings();
     }
 
     // --- 校准 ---
@@ -395,6 +491,9 @@
                     actionBody.classList.add('single-channel');
                 }
             }
+
+            // 应用显示设置到内嵌界面
+            applyDisplaySettingsToEmbedded();
 
             // 根据模式显示/隐藏 listen 面板
             const abListen = document.getElementById('ab-listen');

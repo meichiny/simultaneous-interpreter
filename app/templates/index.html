@@ -399,6 +399,41 @@
                 </div>
                 <div style="font-size:9px; color:#666; margin-top:3px; text-align:center;">校准请保持安静 / Please keep silent during calibration</div>
 
+                <!-- 显示设置 -->
+                <div class="display-settings-block" style="margin-top:15px; padding-top:15px; border-top:1px solid #333;">
+                    <div class="col-title" style="font-size:12px; margin-bottom:10px;">显示设置 / Display</div>
+
+                    <div class="form-group">
+                        <label class="form-label">字号 / Font Size: <span id="display-size-value">13</span>px</label>
+                        <input type="range" id="display-font-size" min="10" max="32" value="13" style="width:100%;" oninput="updateDisplaySetting('fontSize', this.value)">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">行高 / Line Height: <span id="display-lh-value">1.5</span></label>
+                        <input type="range" id="display-line-height" min="1" max="3" step="0.1" value="1.5" style="width:100%;" oninput="updateDisplaySetting('lineHeight', this.value)">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">译文颜色 / Trans Color</label>
+                        <input type="color" id="display-trans-color" value="#ffffff" style="width:100%; height:30px; border:none; border-radius:4px; cursor:pointer;" oninput="updateDisplaySetting('transColor', this.value)">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">原文颜色 / Orig Color</label>
+                        <input type="color" id="display-orig-color" value="#b3b3b3" style="width:100%; height:30px; border:none; border-radius:4px; cursor:pointer;" oninput="updateDisplaySetting('origColor', this.value)">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">背景颜色 / Background</label>
+                        <input type="color" id="display-bg-color" value="#000000" style="width:100%; height:30px; border:none; border-radius:4px; cursor:pointer;" oninput="updateDisplaySetting('bgColor', this.value)">
+                    </div>
+
+                    <div style="display:flex; gap:8px; margin-top:10px;">
+                        <button class="btn-nav" onclick="resetDisplaySettings()" style="flex:1; font-size:10px;">重置默认 / Reset</button>
+                        <button class="btn-nav" onclick="previewDisplaySettings()" style="flex:1; font-size:10px;">预览 / Preview</button>
+                    </div>
+                </div>
+
                 <button class="step-next-btn" onclick="nextGuide(3)">下一步</button>
                 <div class="internal-status-box" id="routing-check-box">
                     <div class="isb-title">内部路由检测 / Routing Check</div>
