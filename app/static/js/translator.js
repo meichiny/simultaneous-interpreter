@@ -207,6 +207,7 @@
 
     // --- 显示设置配置 ---
     const defaultDisplaySettings = {
+        bgOpacity: 100,
         fontSize: 13,
         lineHeight: 1.5,
         transColor: '#ffffff',
@@ -226,6 +227,8 @@
             document.getElementById('display-trans-color').value = settings.transColor || defaultDisplaySettings.transColor;
             document.getElementById('display-orig-color').value = settings.origColor || defaultDisplaySettings.origColor;
             document.getElementById('display-bg-color').value = settings.bgColor || defaultDisplaySettings.bgColor;
+            document.getElementById('display-bg-opacity').value = settings.bgOpacity || defaultDisplaySettings.bgOpacity;
+            document.getElementById('display-opacity-value').textContent = settings.bgOpacity || defaultDisplaySettings.bgOpacity;
         }
     }
 
@@ -235,6 +238,8 @@
             document.getElementById('display-size-value').textContent = value;
         } else if (key === 'lineHeight') {
             document.getElementById('display-lh-value').textContent = value;
+        } else if (key === 'bgOpacity') {
+            document.getElementById('display-opacity-value').textContent = value;
         }
 
         // 保存到 localStorage
@@ -252,6 +257,8 @@
         document.getElementById('display-trans-color').value = defaultDisplaySettings.transColor;
         document.getElementById('display-orig-color').value = defaultDisplaySettings.origColor;
         document.getElementById('display-bg-color').value = defaultDisplaySettings.bgColor;
+        document.getElementById('display-bg-opacity').value = defaultDisplaySettings.bgOpacity;
+        document.getElementById('display-opacity-value').textContent = defaultDisplaySettings.bgOpacity;
     };
 
     window.previewDisplaySettings = function() {
@@ -262,6 +269,7 @@
         params.set('lh', settings.lineHeight || defaultDisplaySettings.lineHeight);
         params.set('tc', (settings.transColor || defaultDisplaySettings.transColor).replace('#', ''));
         params.set('oc', (settings.origColor || defaultDisplaySettings.origColor).replace('#', ''));
+        params.set('bo', settings.bgOpacity || defaultDisplaySettings.bgOpacity);
         params.set('bc', (settings.bgColor || defaultDisplaySettings.bgColor).replace('#', ''));
 
         const previewWindow = window.open('/display?' + params.toString(), 'previewDisplay', 'width=600,height=400');
@@ -305,6 +313,7 @@
             params.set('lh', settings.lineHeight || defaultDisplaySettings.lineHeight);
             params.set('tc', (settings.transColor || defaultDisplaySettings.transColor).replace('#', ''));
             params.set('oc', (settings.origColor || defaultDisplaySettings.origColor).replace('#', ''));
+            params.set('bo', settings.bgOpacity || defaultDisplaySettings.bgOpacity);
             params.set('bc', (settings.bgColor || defaultDisplaySettings.bgColor).replace('#', ''));
 
             // 打开独立窗口
@@ -852,6 +861,7 @@
         if (savedSettings.transColor) params.set('tc', savedSettings.transColor.replace('#', ''));
         if (savedSettings.origColor) params.set('oc', savedSettings.origColor.replace('#', ''));
         if (savedSettings.bgColor) params.set('bc', savedSettings.bgColor.replace('#', ''));
+        if (savedSettings.bgOpacity) params.set('bo', savedSettings.bgOpacity);
 
         const url = '/display' + (params.toString() ? '?' + params.toString() : '');
         displayWindow = window.open(url, 'translationDisplay', 'width=800,height=600,location=no,menubar=no,toolbar=no');
