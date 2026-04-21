@@ -393,24 +393,8 @@
         socket.emit('start_session', lastSessionPayload);
         isRunning = true;
 
-        // 修改 text 更新函数，将文本发送到目标窗口
-        const originalUpdateText = updateText;
-        updateText = function(prefix, data) {
-            // 调用原始函数（保持兼容性）
-            originalUpdateText(prefix, data);
-
-            // 发送到目标窗口
-            if (targetWindow && !targetWindow.closed) {
-                const isTop = (prefix === 'speak' && data.type === 'translated') ||
-                             (prefix === 'listen' && data.type === 'original');
-                targetWindow.postMessage({
-                    type: 'textUpdate',
-                    position: isTop ? 'top' : 'bottom',
-                    text: data.text,
-                    isFinal: data.isFinal
-                }, '*');
-            }
-        };
+        // 设置全局 displayWindow 变量，让 updateText 自动发送文本到新窗口
+        displayWindow = targetWindow;
     }
 
     // 显示/隐藏运行中状态
@@ -792,10 +776,12 @@
         monitorAudioLevel(prefix, analyser);
         activeStreams.push({ stream, analysisContext });
 
-        if (mode === 'passthrough') {
-            playerEl.srcObject = stream; playerEl.muted = false; playerEl.play().catch(console.error);
-        } else {
-            playerEl.srcObject = null;
+        if (playerEl) {
+            if (mode === 'passthrough') {
+                playerEl.srcObject = stream; playerEl.muted = false; playerEl.play().catch(console.error);
+            } else {
+                playerEl.srcObject = null;
+            }
         }
     }
 
