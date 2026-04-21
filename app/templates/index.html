@@ -122,6 +122,13 @@
         .btn-start:disabled { background: var(--bg-input); color: #666; cursor: not-allowed; box-shadow: none; }
         .btn-start.high-latency { background: var(--status-red); opacity: 1; color: white; }
 
+        /* 运行中状态指示器动画 */
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
         /* =========================================
            3. 引导弹窗
            ========================================= */
@@ -399,6 +406,21 @@
                 </div>
                 <div style="font-size:9px; color:#666; margin-top:3px; text-align:center;">校准请保持安静 / Please keep silent during calibration</div>
 
+                <!-- 运行模式 -->
+                <div class="run-mode-block" style="margin-top:15px; padding-top:15px; border-top:1px solid #333;">
+                    <div class="col-title" style="font-size:12px; margin-bottom:10px;">运行模式 / Run Mode</div>
+                    <div class="form-group" style="display:flex; gap:15px; align-items:center;">
+                        <label style="display:flex; align-items:center; gap:5px; cursor:pointer; font-size:12px;">
+                            <input type="radio" name="run-mode" value="embedded" checked onchange="onRunModeChange()">
+                            <span>内嵌运行 / In Page</span>
+                        </label>
+                        <label style="display:flex; align-items:center; gap:5px; cursor:pointer; font-size:12px;">
+                            <input type="radio" name="run-mode" value="window" onchange="onRunModeChange()">
+                            <span>新窗口运行 / New Window</span>
+                        </label>
+                    </div>
+                </div>
+
                 <!-- 显示设置 -->
                 <div class="display-settings-block" style="margin-top:15px; padding-top:15px; border-top:1px solid #333;">
                     <div class="col-title" style="font-size:12px; margin-bottom:10px;">显示设置 / Display</div>
@@ -454,7 +476,14 @@
             <span id="connectionStatus" style="font-size:11px; color:var(--text-sub); margin-right:10px;">连接中... / Connecting...</span>
             <span id="networkLatency" class="status-text">-- ms</span>
 
+            <!-- 运行中状态指示器（默认隐藏） -->
+            <div id="running-indicator" style="display:none; align-items:center; gap:8px; margin-right:10px;">
+                <div style="width:8px; height:8px; background:var(--status-green); border-radius:50%; animation:pulse 1.5s infinite;"></div>
+                <span style="font-size:12px; color:var(--status-green);">运行中 / Running</span>
+            </div>
+
             <button id="startBtn" class="btn-start" onclick="startSession()" disabled>开始运行 / Start</button>
+            <button id="stopBtn" class="btn-start" onclick="stopSession()" style="display:none; background:var(--status-red);">停止运行 / Stop</button>
         </div>
     </div>
 

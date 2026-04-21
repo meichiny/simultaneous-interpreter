@@ -285,6 +285,151 @@
         }, 500);
     };
 
+    // --- 运行模式配置 ---
+    window.onRunModeChange = function() {
+        const mode = document.querySelector('input[name="run-mode"]:checked')?.value || 'embedded';
+        sessionStorage.setItem('runMode', mode);
+    };
+
+    function getRunMode() {
+        return sessionStorage.getItem('runMode') || 'embedded';
+    }
+
+    // 新窗口运行模式
+    async function startInNewWindow() {
+        try {
+            // 获取设置
+            const settings = JSON.parse(localStorage.getItem('displayTextSettings') || '{}');
+            const params = new URLSearchParams();
+            params.set('fs', settings.fontSize || defaultDisplaySettings.fontSize);
+            params.set('lh', settings.lineHeight || defaultDisplaySettings.lineHeight);
+            params.set('tc', (settings.transColor || defaultDisplaySettings.transColor).replace('#', ''));
+            params.set('oc', (settings.origColor || defaultDisplaySettings.origColor).replace('#', ''));
+            params.set('bc', (settings.bgColor || defaultDisplaySettings.bgColor).replace('#', ''));
+
+            // 打开独立窗口
+            const displayWin = window.open('/display?' + params.toString(), 'translationDisplay', 'width=800,height=600,location=no,menubar=no,toolbar=no');
+            if (!displayWin) {
+                alert('请允许弹出窗口 / Please allow popups');
+                return;
+            }
+
+            // 显示运行中状态
+            showRunningState(true);
+
+            // 启动翻译会话（但不切换页面）
+            await startTranslationSession(displayWin);
+        } catch (e) {
+            console.error(e);
+            alert('启动失败 / Start Failed: ' + e.message);
+            showRunningState(false);
+        }
+    }
+
+    // 启动翻译会话（供新窗口模式调用）
+    async function startTranslationSession(targetWindow) {
+        // 保存目标窗口引用
+        displayWindow = targetWindow;
+
+        // 读取配置
+        const channelMode = document.getElementById('channel-mode')?.value || 'single';
+        const ttsEnabled = document.getElementById('tts-enable')?.checked ?? true;
+        const isDualMode = channelMode === 'dual';
+
+        deviceIds.mic = document.getElementById('dev-real-mic').value;
+
+        // 根据模式决定是否检测虚拟声卡
+        const hasCableB = isDualMode && !!virtualCables.cableB_Output_Id;
+
+        const langMySpeak = document.getElementById('lang-my-speak').value;
+        const langTheirHear = document.getElementById('lang-their-hear').value;
+        const langTheirSpeak = document.getElementById('lang-their-speak').value;
+        const langMyHear = document.getElementById('lang-my-hear').value;
+
+        modes.speak = langMySpeak === langTheirHear ? 'passthrough' : 'translate';
+        modes.listen = langTheirSpeak === langMyHear ? 'passthrough' : 'translate';
+        ttsConfig.speak = ttsEnabled && (langMySpeak !== langTheirHear);
+        ttsConfig.listen = ttsEnabled && (langTheirSpeak !== langMyHear);
+
+        // 语言方向校验
+        const zhEn = ['zh', 'en'];
+        if (langMySpeak === 'zhen' || langTheirHear === 'zhen') {
+            if (langMySpeak !== 'zhen' || langTheirHear !== 'zhen') {
+                throw new Error('中英混说模式：源和目标都必须选"中英混说" / Mixed mode requires both set to Mixed');
+            }
+        } else if (!zhEn.includes(langMySpeak) && !zhEn.includes(langTheirHear)) {
+            throw new Error('源语言或目标语言至少有一个须为中文或英文 / One side must be Chinese or English');
+        }
+
+        const apiDirSpeak = `${langMySpeak}-${langTheirHear}`;
+        const apiDirListen = `${langTheirSpeak}-${langMyHear}`;
+
+        // 启动音频流
+        await setupStream('speak', deviceIds.mic, ctxSpeak, null, modes.speak);
+        if (hasCableB) {
+            await setupStream('listen', virtualCables.cableB_Output_Id, ctxListen, null, modes.listen);
+        }
+
+        // 发送开始会话事件
+        const catIds = Array.from(document.querySelectorAll('.glossary-item input:checked')).map(c => parseInt(c.value));
+        const voiceSpeak = document.getElementById('voice-speak');
+        const voiceListen = document.getElementById('voice-listen');
+        const speakCfg = {
+            mode: 'translate',
+            direction: apiDirSpeak,
+            deviceId: deviceIds.mic,
+            category_ids: catIds,
+            speaker_id: voiceSpeak ? voiceSpeak.value : ''
+        };
+        const listenCfg = hasCableB ? {
+            mode: 'translate',
+            direction: apiDirListen,
+            deviceId: virtualCables.cableB_Output_Id,
+            category_ids: [],
+            speaker_id: voiceListen ? voiceListen.value : ''
+        } : null;
+
+        lastSessionPayload = { speak_config: speakCfg, listen_config: listenCfg };
+        socket.emit('start_session', lastSessionPayload);
+        isRunning = true;
+
+        // 修改 text 更新函数，将文本发送到目标窗口
+        const originalUpdateText = updateText;
+        updateText = function(prefix, data) {
+            // 调用原始函数（保持兼容性）
+            originalUpdateText(prefix, data);
+
+            // 发送到目标窗口
+            if (targetWindow && !targetWindow.closed) {
+                const isTop = (prefix === 'speak' && data.type === 'translated') ||
+                             (prefix === 'listen' && data.type === 'original');
+                targetWindow.postMessage({
+                    type: 'textUpdate',
+                    position: isTop ? 'top' : 'bottom',
+                    text: data.text,
+                    isFinal: data.isFinal
+                }, '*');
+            }
+        };
+    }
+
+    // 显示/隐藏运行中状态
+    function showRunningState(running) {
+        const indicator = document.getElementById('running-indicator');
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+
+        if (running) {
+            if (indicator) indicator.style.display = 'flex';
+            if (startBtn) startBtn.style.display = 'none';
+            if (stopBtn) stopBtn.style.display = 'block';
+        } else {
+            if (indicator) indicator.style.display = 'none';
+            if (startBtn) startBtn.style.display = 'block';
+            if (stopBtn) stopBtn.style.display = 'none';
+        }
+    }
+
     // 应用显示设置到内嵌翻译界面
     function applyDisplaySettingsToEmbedded() {
         const settings = JSON.parse(localStorage.getItem('displayTextSettings') || '{}');
@@ -338,11 +483,16 @@
         // 恢复保存的配置
         const savedMode = sessionStorage.getItem('channelMode') || 'single';
         const savedTts = sessionStorage.getItem('ttsEnabled');
+        const savedRunMode = sessionStorage.getItem('runMode') || 'embedded';
 
         document.getElementById('channel-mode').value = savedMode;
         if (savedTts !== null) {
             document.getElementById('tts-enable').checked = savedTts === 'true';
         }
+
+        // 恢复运行模式单选
+        const runModeRadio = document.querySelector(`input[name="run-mode"][value="${savedRunMode}"]`);
+        if (runModeRadio) runModeRadio.checked = true;
 
         // 应用初始状态
         onChannelModeChange();
@@ -431,6 +581,14 @@
     // --- 会话控制 ---
     window.startSession = async function() {
         try {
+            // 检查运行模式
+            const runMode = getRunMode();
+            if (runMode === 'window') {
+                await startInNewWindow();
+                return;
+            }
+
+            // 内嵌运行模式继续执行
             // 读取配置
             const channelMode = document.getElementById('channel-mode')?.value || 'single';
             const ttsEnabled = document.getElementById('tts-enable')?.checked ?? true;
@@ -578,6 +736,9 @@
         if (displayWindow && !displayWindow.closed) {
             displayWindow.postMessage({ type: 'clear' }, '*');
         }
+
+        // 隐藏运行中状态（新窗口模式）
+        showRunningState(false);
     };
 
     // --- 音频流 + VAD 接入 SocketHandler ---
