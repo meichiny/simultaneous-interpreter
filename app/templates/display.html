@@ -21,6 +21,16 @@
             word-wrap: break-word;
         }
 
+        /* 译文面板 - 使用 text-color */
+        #panelTop .panel-content {
+            color: var(--text-color, #ffffff);
+        }
+
+        /* 原文面板 - 使用 orig-text-color */
+        #panelBottom .panel-content {
+            color: var(--orig-text-color, #b3b3b3);
+        }
+
         .container {
             height: 100%;
             display: flex;
@@ -213,6 +223,7 @@
             // 从 URL 参数读取（优先）
             if (params.has('bc')) vars.push('--bg-color:#' + params.get('bc'));
             if (params.has('tc')) vars.push('--text-color:#' + params.get('tc'));
+            if (params.has('oc')) vars.push('--orig-text-color:#' + params.get('oc'));
             if (params.has('fs')) vars.push('--text-size:' + params.get('fs') + 'px');
             if (params.has('lh')) vars.push('--line-height:' + params.get('lh'));
 
@@ -221,6 +232,7 @@
                 const settings = JSON.parse(localStorage.getItem('displaySettings') || '{}');
                 if (settings.bgColor) vars.push('--bg-color:' + settings.bgColor);
                 if (settings.textColor) vars.push('--text-color:' + settings.textColor);
+                if (settings.origColor) vars.push('--orig-text-color:' + settings.origColor);
                 if (settings.fontSize) vars.push('--text-size:' + settings.fontSize + 'px');
                 if (settings.lineHeight) vars.push('--line-height:' + settings.lineHeight);
             }
@@ -250,8 +262,13 @@
         </div>
 
         <div class="setting-item">
-            <label class="setting-label">文字颜色 / Text Color</label>
+            <label class="setting-label">译文颜色 / Trans Color</label>
             <input type="color" id="textColor" value="#ffffff" oninput="updateTextColorAndSave(this.value)">
+        </div>
+
+        <div class="setting-item">
+            <label class="setting-label">原文颜色 / Orig Color</label>
+            <input type="color" id="origColor" value="#b3b3b3" oninput="updateOrigColorAndSave(this.value)">
         </div>
 
         <div class="setting-item">
@@ -310,6 +327,7 @@
                 fontSize: parseInt(document.getElementById('fontSize').value),
                 lineHeight: parseFloat(document.getElementById('lineHeight').value),
                 textColor: document.getElementById('textColor').value,
+                origColor: document.getElementById('origColor').value,
                 bgColor: document.getElementById('bgColor').value
             };
             localStorage.setItem('displaySettings', JSON.stringify(settings));
@@ -331,6 +349,10 @@
             document.documentElement.style.setProperty('--text-color', value);
         }
 
+        function updateOrigColor(value) {
+            document.documentElement.style.setProperty('--orig-text-color', value);
+        }
+
         function updateBgColor(value) {
             document.documentElement.style.setProperty('--bg-color', value);
         }
@@ -341,10 +363,12 @@
             const fontSize = document.getElementById('fontSize').value;
             const lineHeight = document.getElementById('lineHeight').value;
             const textColor = document.getElementById('textColor').value;
+            const origColor = document.getElementById('origColor').value;
             const bgColor = document.getElementById('bgColor').value;
             html.style.setProperty('--text-size', fontSize + 'px');
             html.style.setProperty('--line-height', lineHeight);
             html.style.setProperty('--text-color', textColor);
+            html.style.setProperty('--orig-text-color', origColor);
             html.style.setProperty('--bg-color', bgColor);
         }
 
@@ -367,6 +391,11 @@
 
         function updateTextColorAndSave(value) {
             updateTextColor(value);
+            scheduleSave();
+        }
+
+        function updateOrigColorAndSave(value) {
+            updateOrigColor(value);
             scheduleSave();
         }
 

@@ -261,6 +261,7 @@
         params.set('fs', settings.fontSize || defaultDisplaySettings.fontSize);
         params.set('lh', settings.lineHeight || defaultDisplaySettings.lineHeight);
         params.set('tc', (settings.transColor || defaultDisplaySettings.transColor).replace('#', ''));
+        params.set('oc', (settings.origColor || defaultDisplaySettings.origColor).replace('#', ''));
         params.set('bc', (settings.bgColor || defaultDisplaySettings.bgColor).replace('#', ''));
 
         const previewWindow = window.open('/display?' + params.toString(), 'previewDisplay', 'width=600,height=400');
@@ -696,12 +697,13 @@
             displayWindow.focus();
             return;
         }
-        // 从 localStorage 读取显示窗口保存的设置
-        const savedSettings = JSON.parse(localStorage.getItem('displaySettings') || '{}');
+        // 从 localStorage 读取配置页的显示设置
+        const savedSettings = JSON.parse(localStorage.getItem('displayTextSettings') || '{}');
         const params = new URLSearchParams();
         if (savedSettings.fontSize) params.set('fs', savedSettings.fontSize);
         if (savedSettings.lineHeight) params.set('lh', savedSettings.lineHeight);
-        if (savedSettings.textColor) params.set('tc', savedSettings.textColor.replace('#', ''));
+        if (savedSettings.transColor) params.set('tc', savedSettings.transColor.replace('#', ''));
+        if (savedSettings.origColor) params.set('oc', savedSettings.origColor.replace('#', ''));
         if (savedSettings.bgColor) params.set('bc', savedSettings.bgColor.replace('#', ''));
 
         const url = '/display' + (params.toString() ? '?' + params.toString() : '');
