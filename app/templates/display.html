@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>翻译显示窗口 / Translation Display</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        html, body {
+            height: 100%;
+            font-family: "Segoe UI", "Microsoft YaHei", "PingFang SC", sans-serif;
+            background-color: var(--bg-color, #000000);
+            color: var(--text-color, #ffffff);
+            overflow: hidden;
+        }
+
+        .panel-content {
+            font-size: var(--text-size, 24px);
+            line-height: var(--line-height, 1.6);
+            word-wrap: break-word;
+        }
+
+        .container {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+        }
+
+        .panel {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            border: 2px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .panel:last-child {
+            margin-bottom: 0;
+        }
+
+        .panel-header {
+            font-size: 14px;
+            color: rgba(255,255,255,0.5);
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .sentence {
+            display: inline;
+            margin-right: 8px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .pending {
+            opacity: 0.7;
+            font-style: italic;
+        }
+
+        /* 滚动条样式 */
+        .panel::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .panel::-webkit-scrollbar-track {
+            background: rgba(255,255,255,0.05);
+            border-radius: 3px;
+        }
+
+        .panel::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.2);
+            border-radius: 3px;
+        }
+
+        /* 设置按钮 */
+        .settings-btn {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            width: 36px;
+            height: 36px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 50%;
+            color: rgba(255,255,255,0.7);
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            z-index: 100;
+        }
+
+        .settings-btn:hover {
+            background: rgba(255,255,255,0.2);
+            color: #fff;
+        }
+
+        /* 设置面板 */
+        .settings-panel {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(30,30,30,0.95);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 12px;
+            padding: 25px;
+            width: 320px;
+            display: none;
+            z-index: 200;
+            backdrop-filter: blur(10px);
+        }
+
+        .settings-panel.show {
+            display: block;
+        }
+
+        .settings-title {
+            font-size: 16px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .setting-item {
+            margin-bottom: 15px;
+        }
+
+        .setting-label {
+            font-size: 12px;
+            color: rgba(255,255,255,0.6);
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .setting-input {
+            width: 100%;
+            padding: 8px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 4px;
+            color: #fff;
+            font-size: 14px;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            margin-top: 5px;
+        }
+
+        input[type="color"] {
+            width: 100%;
+            height: 40px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .range-value {
+            text-align: right;
+            font-size: 12px;
+            color: rgba(255,255,255,0.5);
+            margin-top: 4px;
+        }
+
+        .close-settings {
+            width: 100%;
+            padding: 10px;
+            background: #3b82f6;
+            border: none;
+            border-radius: 6px;
+            color: #fff;
+            font-size: 14px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        .close-settings:hover {
+            background: #2563eb;
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            z-index: 150;
+        }
+
+        .overlay.show {
+            display: block;
+        }
+    </style>
+    <!-- 优先从 URL 参数读取设置，避免闪烁 -->
+    <script>
+        (function() {
+            const params = new URLSearchParams(window.location.search);
+            const html = document.documentElement;
+            const vars = [];
+
+            // 从 URL 参数读取（优先）
+            if (params.has('bc')) vars.push('--bg-color:#' + params.get('bc'));
+            if (params.has('tc')) vars.push('--text-color:#' + params.get('tc'));
+            if (params.has('fs')) vars.push('--text-size:' + params.get('fs') + 'px');
+            if (params.has('lh')) vars.push('--line-height:' + params.get('lh'));
+
+            // 如果 URL 没有，从 localStorage 读取（兼容旧版本）
+            if (vars.length === 0) {
+                const settings = JSON.parse(localStorage.getItem('displaySettings') || '{}');
+                if (settings.bgColor) vars.push('--bg-color:' + settings.bgColor);
+                if (settings.textColor) vars.push('--text-color:' + settings.textColor);
+                if (settings.fontSize) vars.push('--text-size:' + settings.fontSize + 'px');
+                if (settings.lineHeight) vars.push('--line-height:' + settings.lineHeight);
+            }
+
+            if (vars.length > 0) {
+                html.style.cssText = vars.join(';');
+            }
+        })();
+    </script>
+</head>
+<body>
+    <button class="settings-btn" onclick="toggleSettings()">⚙</button>
+
+    <div class="overlay" id="overlay" onclick="toggleSettings()"></div>
+
+    <div class="settings-panel" id="settingsPanel">
+        <div class="settings-title">显示设置 / Display Settings</div>
+
+        <div class="setting-item">
+            <label class="setting-label">文字大小 / Font Size: <span id="sizeValue">24</span>px</label>
+            <input type="range" id="fontSize" min="12" max="72" value="24" oninput="updateFontSizeAndSave(this.value)">
+        </div>
+
+        <div class="setting-item">
+            <label class="setting-label">行高 / Line Height: <span id="lineHeightValue">1.6</span></label>
+            <input type="range" id="lineHeight" min="1" max="3" step="0.1" value="1.6" oninput="updateLineHeightAndSave(this.value)">
+        </div>
+
+        <div class="setting-item">
+            <label class="setting-label">文字颜色 / Text Color</label>
+            <input type="color" id="textColor" value="#ffffff" oninput="updateTextColorAndSave(this.value)">
+        </div>
+
+        <div class="setting-item">
+            <label class="setting-label">背景颜色 / Background Color</label>
+            <input type="color" id="bgColor" value="#000000" oninput="updateBgColorAndSave(this.value)">
+        </div>
+
+        <button class="close-settings" onclick="toggleSettings()">完成 / Done</button>
+    </div>
+
+    <div class="container">
+        <div class="panel" id="panelTop">
+            <div class="panel-header">译文 / Translation</div>
+            <div class="panel-content" id="contentTop">
+                <span class="pending" id="pendingTop">等待输入...</span>
+            </div>
+        </div>
+        <div class="panel" id="panelBottom">
+            <div class="panel-header">原文 / Original</div>
+            <div class="panel-content" id="contentBottom">
+                <span class="pending" id="pendingBottom">Waiting for input...</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 从 URL 参数或 localStorage 加载设置到控件
+        function loadSettingsToUI() {
+            const params = new URLSearchParams(window.location.search);
+            const savedSettings = JSON.parse(localStorage.getItem('displaySettings') || '{}');
+
+            // 优先使用 URL 参数，否则使用 localStorage
+            const fontSize = params.get('fs') || savedSettings.fontSize;
+            const lineHeight = params.get('lh') || savedSettings.lineHeight;
+            const textColor = params.get('tc') ? '#' + params.get('tc') : savedSettings.textColor;
+            const bgColor = params.get('bc') ? '#' + params.get('bc') : savedSettings.bgColor;
+
+            if (fontSize) {
+                document.getElementById('fontSize').value = fontSize;
+                document.getElementById('sizeValue').textContent = fontSize;
+            }
+            if (lineHeight) {
+                document.getElementById('lineHeight').value = lineHeight;
+                document.getElementById('lineHeightValue').textContent = lineHeight;
+            }
+            if (textColor) {
+                document.getElementById('textColor').value = textColor;
+            }
+            if (bgColor) {
+                document.getElementById('bgColor').value = bgColor;
+            }
+        }
+
+        function saveSettings() {
+            const settings = {
+                fontSize: parseInt(document.getElementById('fontSize').value),
+                lineHeight: parseFloat(document.getElementById('lineHeight').value),
+                textColor: document.getElementById('textColor').value,
+                bgColor: document.getElementById('bgColor').value
+            };
+            localStorage.setItem('displaySettings', JSON.stringify(settings));
+            applyAllStylesToHtml();
+        }
+
+        // UI更新函数（无保存）
+        function updateFontSize(value) {
+            document.documentElement.style.setProperty('--text-size', value + 'px');
+            document.getElementById('sizeValue').textContent = value;
+        }
+
+        function updateLineHeight(value) {
+            document.documentElement.style.setProperty('--line-height', value);
+            document.getElementById('lineHeightValue').textContent = value;
+        }
+
+        function updateTextColor(value) {
+            document.documentElement.style.setProperty('--text-color', value);
+        }
+
+        function updateBgColor(value) {
+            document.documentElement.style.setProperty('--bg-color', value);
+        }
+
+        // 应用所有设置到 html style
+        function applyAllStylesToHtml() {
+            const html = document.documentElement;
+            const fontSize = document.getElementById('fontSize').value;
+            const lineHeight = document.getElementById('lineHeight').value;
+            const textColor = document.getElementById('textColor').value;
+            const bgColor = document.getElementById('bgColor').value;
+            html.style.setProperty('--text-size', fontSize + 'px');
+            html.style.setProperty('--line-height', lineHeight);
+            html.style.setProperty('--text-color', textColor);
+            html.style.setProperty('--bg-color', bgColor);
+        }
+
+        // 带保存的更新函数（绑定到input事件）
+        let saveTimer = null;
+        function scheduleSave() {
+            if (saveTimer) clearTimeout(saveTimer);
+            saveTimer = setTimeout(saveSettings, 100);
+        }
+
+        function updateFontSizeAndSave(value) {
+            updateFontSize(value);
+            scheduleSave();
+        }
+
+        function updateLineHeightAndSave(value) {
+            updateLineHeight(value);
+            scheduleSave();
+        }
+
+        function updateTextColorAndSave(value) {
+            updateTextColor(value);
+            scheduleSave();
+        }
+
+        function updateBgColorAndSave(value) {
+            updateBgColor(value);
+            scheduleSave();
+        }
+
+        function toggleSettings() {
+            document.getElementById('settingsPanel').classList.toggle('show');
+            document.getElementById('overlay').classList.toggle('show');
+        }
+
+        // 接收来自主窗口的消息
+        window.addEventListener('message', function(event) {
+            const data = event.data;
+            if (data.type === 'textUpdate') {
+                updateText(data);
+            } else if (data.type === 'clear') {
+                clearAll();
+            } else if (data.type === 'settings') {
+                if (data.fontSize) { updateFontSize(data.fontSize); document.getElementById('fontSize').value = data.fontSize; document.getElementById('sizeValue').textContent = data.fontSize; }
+                if (data.lineHeight) { updateLineHeight(data.lineHeight); document.getElementById('lineHeight').value = data.lineHeight; document.getElementById('lineHeightValue').textContent = data.lineHeight; }
+                if (data.textColor) { updateTextColor(data.textColor); document.getElementById('textColor').value = data.textColor; }
+                if (data.bgColor) { updateBgColor(data.bgColor); document.getElementById('bgColor').value = data.bgColor; }
+                scheduleSave();
+            }
+        });
+
+        function updateText(data) {
+            const isTop = data.position === 'top';
+            const contentEl = isTop ? document.getElementById('contentTop') : document.getElementById('contentBottom');
+            const pendingEl = isTop ? document.getElementById('pendingTop') : document.getElementById('pendingBottom');
+            if (data.isFinal) {
+                if (data.text) {
+                    const span = document.createElement('span');
+                    span.className = 'sentence';
+                    span.textContent = data.text + ' ';
+                    contentEl.insertBefore(span, pendingEl);
+                    pendingEl.textContent = isTop ? '等待输入...' : 'Waiting for input...';
+                    const sentences = contentEl.querySelectorAll('.sentence');
+                    if (sentences.length > 50) {
+                        for (let i = 0; i < sentences.length - 50; i++) {
+                            sentences[i].remove();
+                        }
+                    }
+                    contentEl.parentElement.scrollTop = contentEl.scrollHeight;
+                }
+            } else {
+                pendingEl.textContent = data.text || '...';
+            }
+        }
+
+        function clearAll() {
+            const contentTop = document.getElementById('contentTop');
+            const contentBottom = document.getElementById('contentBottom');
+            const pendingTop = document.getElementById('pendingTop');
+            const pendingBottom = document.getElementById('pendingBottom');
+            contentTop.innerHTML = '';
+            contentTop.appendChild(pendingTop);
+            pendingTop.textContent = '等待输入...';
+            contentBottom.innerHTML = '';
+            contentBottom.appendChild(pendingBottom);
+            pendingBottom.textContent = 'Waiting for input...';
+        }
+
+        // 初始化
+        loadSettingsToUI();
+        applyAllStylesToHtml();
+    </script>
+</body>
+</html>

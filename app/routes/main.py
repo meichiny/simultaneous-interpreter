@@ -13,3 +13,8 @@ def index():
 @main_bp.route('/glossary')
 def glossary_management():
     return render_template('glossary.html')
+
+
+@main_bp.route('/display')
+def display_window():
+    return render_template('display.html')

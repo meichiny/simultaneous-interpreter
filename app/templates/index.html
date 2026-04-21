@@ -20,9 +20,14 @@
             --text-main: #e5e5e5;
             --text-sub: #a3a3a3;
             --mask: rgba(0, 0, 0, 0.85);
-            --status-green: #10b981; 
+            --status-green: #10b981;
             --status-yellow: #f59e0b;
             --status-red: #ef4444;
+            /* 动态文字设置 */
+            --trans-font-size: 13px;
+            --trans-text-color: rgba(255, 255, 255, 0.95);
+            --orig-text-color: rgba(255, 255, 255, 0.7);
+            --action-bg-color: rgba(0, 0, 0, 0.7);
         }
 
         html, body { 
@@ -143,24 +148,34 @@
         .action-close-btn { width: 32px; height: 100%; display: flex; align-items: center; justify-content: center; color: #ccc; cursor: pointer; font-size: 12px; border-top-right-radius: 6px; }
         .action-close-btn:hover { background: #e81123; color: white; }
 
-        .action-body { 
-            flex: 1; display: flex; overflow: hidden; 
-            background: rgba(0, 0, 0, 0.7); 
+        .action-body {
+            flex: 1; display: flex; overflow: hidden;
+            background: var(--action-bg-color);
             border-bottom-left-radius: 6px; border-bottom-right-radius: 6px;
             margin: 0; border: 1px solid rgba(255,255,255,0.05); border-top: none;
-            padding: 8px; gap: 12px; 
+            padding: 8px; gap: 12px;
         }
 
-        .action-box { 
-            flex: 1; background: transparent; 
-            display: flex; flex-direction: column; 
+        .action-box {
+            flex: 1; background: transparent;
+            display: flex; flex-direction: column;
             border: 1px solid transparent; /* 默认无边框 */
             border-radius: 6px;
-            padding: 0; 
+            padding: 0;
             transition: border-color 0.2s, background 0.2s, opacity 0.3s; /* 平滑过渡 */
             position: relative;
-            box-sizing: border-box; 
-            overflow: hidden; 
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        /* 单通道模式：让 speak 面板占据全宽 */
+        .action-body.single-channel .action-box#ab-speak {
+            flex: 1;
+            width: 100%;
+        }
+
+        .action-body.single-channel .action-box#ab-listen {
+            display: none !important;
         }
 
         /* 状态颜色定义 */
@@ -190,13 +205,13 @@
 
         /* Top Pane: 外语/译文 (高亮) */
         .pane-trans {
-            flex: 1; 
+            flex: 1;
             overflow-y: auto; overflow-x: hidden; padding: 8px 8px 4px 8px;
-            mask-image: linear-gradient(to bottom, transparent 0%, black 15%); 
-            -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 15%); 
-            
-            font-size: 13px; 
-            color: rgba(255, 255, 255, 0.95); 
+            mask-image: linear-gradient(to bottom, transparent 0%, black 15%);
+            -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 15%);
+
+            font-size: var(--trans-font-size);
+            color: var(--trans-text-color);
             font-weight: 500; line-height: 1.5;
             scroll-behavior: smooth; word-wrap: break-word;
         }
@@ -207,14 +222,14 @@
 
         /* Bottom Pane: 母语/原文 (稍暗) */
         .pane-orig {
-            flex: 1; 
+            flex: 1;
             overflow-y: auto; overflow-x: hidden; padding: 4px 8px 8px 8px;
-            mask-image: linear-gradient(to bottom, transparent 0%, black 15%); 
-            -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 15%); 
+            mask-image: linear-gradient(to bottom, transparent 0%, black 15%);
+            -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 15%);
 
-            font-size: 13px; 
-            color: rgba(255, 255, 255, 0.7); 
-            font-weight: 400; line-height: 1.5; 
+            font-size: var(--trans-font-size);
+            color: var(--orig-text-color);
+            font-weight: 400; line-height: 1.5;
             scroll-behavior: smooth; word-wrap: break-word;
         }
         
@@ -258,6 +273,7 @@
             <div class="header-center">
                 <a href="/glossary"><button class="btn-nav">术语管理 / Glossary Mgr</button></a>
                 <a href="/meetings"><button class="btn-nav">会议记录 / Meetings</button></a>
+                <button class="btn-nav" onclick="openDisplayWindow()">📺 显示窗口 / Display</button>
                 <button class="btn-nav" onclick="resetGuide()" style="opacity:0.5; margin-left:10px;">⚠ 重置 / Reset Guide</button>
             </div>
         </div>
@@ -352,9 +368,30 @@
 
             <div id="card-audio" class="col-card">
                 <div class="col-title">2. 本地音频 / Audio Devices <span class="step-badge">必要</span></div>
+
+                <!-- 通道模式选择 -->
+                <div class="form-group">
+                    <label class="form-label">通道模式 / Channel Mode</label>
+                    <select id="channel-mode" onchange="onChannelModeChange()">
+                        <option value="single" selected>单通道 / Single (仅麦克风输入)</option>
+                        <option value="dual">双通道 / Dual (需要虚拟声卡)</option>
+                    </select>
+                </div>
+
                 <div class="form-group"><label class="form-label">麦克风 / Input (Mic)</label><select id="dev-real-mic"><option>扫描中... / Scanning...</option></select></div>
-                <div class="form-group"><label class="form-label">耳机 / Output (Speaker)</label><select id="dev-real-spk"><option>扫描中... / Scanning...</option></select></div>
-                
+                <div class="form-group" id="speaker-output-group"><label class="form-label">耳机 / Output (Speaker)</label><select id="dev-real-spk"><option>扫描中... / Scanning...</option></select></div>
+
+                <!-- TTS 开关 -->
+                <div class="form-group" style="margin-top:10px; padding-top:10px; border-top:1px solid #333;">
+                    <label class="form-label">语音输出 / TTS Output</label>
+                    <div style="display:flex; gap:15px; align-items:center;">
+                        <label style="display:flex; align-items:center; gap:5px; cursor:pointer; font-size:12px;">
+                            <input type="checkbox" id="tts-enable" checked onchange="onTtsToggle()">
+                            <span>启用语音播放 / Enable TTS</span>
+                        </label>
+                    </div>
+                </div>
+
                 <div class="btn-row">
                     <button id="btn-calib" class="btn-calibrate" onclick="calibrateNoise()">
                         <span>⚡ 智能校准 / Auto Calibrate</span>
@@ -363,7 +400,7 @@
                 <div style="font-size:9px; color:#666; margin-top:3px; text-align:center;">校准请保持安静 / Please keep silent during calibration</div>
 
                 <button class="step-next-btn" onclick="nextGuide(3)">下一步</button>
-                <div class="internal-status-box">
+                <div class="internal-status-box" id="routing-check-box">
                     <div class="isb-title">内部路由检测 / Routing Check</div>
                     <div class="isb-group"><span class="isb-label">AI 听 (In):</span><span id="status-cable-b" class="isb-val">扫描中...</span></div>
                     <div class="isb-group"><span class="isb-label">AI 说 (Out):</span><span id="status-cable-a" class="isb-val">扫描中...</span></div>
@@ -392,7 +429,11 @@
                 <div class="act-item"><div id="act-status-dot" class="status-dot"></div><span id="act-status-text">就绪 / Ready</span></div>
                 <div class="act-item" style="border-left:1px solid #444; padding-left:10px;"><span id="act-latency">-- ms</span></div>
             </div>
-            <div class="action-close-btn" onclick="stopSession()" title="退出">✕</div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <button class="btn-nav" onclick="openDisplayWindow()" style="font-size: 10px; padding: 2px 8px;">📺 打开显示窗口</button>
+                <button class="btn-nav" onclick="toggleTextSettings()" style="font-size: 10px; padding: 2px 8px;">🎨 字体设置</button>
+                <div class="action-close-btn" onclick="stopSession()" title="退出">✕</div>
+            </div>
         </div>
         
         <div class="action-body">
@@ -418,6 +459,36 @@
 
     <audio id="player-for-cable-a" style="display:none"></audio>
     <audio id="player-for-headset" style="display:none"></audio>
+
+    <!-- 字体设置面板 -->
+    <div id="text-settings-panel" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:rgba(30,30,30,0.95); border:1px solid #444; border-radius:12px; padding:25px; width:300px; z-index:2000; backdrop-filter:blur(10px);">
+        <div style="font-size:16px; margin-bottom:20px; text-align:center;">文字显示设置</div>
+
+        <div style="margin-bottom:15px;">
+            <label style="display:block; font-size:11px; color:#888; margin-bottom:8px;">文字大小 / Font Size: <span id="setting-size-value">13</span>px</label>
+            <input type="range" id="setting-font-size" min="10" max="32" value="13" style="width:100%;" oninput="updateSetting('fontSize', this.value)">
+        </div>
+
+        <div style="margin-bottom:15px;">
+            <label style="display:block; font-size:11px; color:#888; margin-bottom:8px;">译文颜色 / Trans Color</label>
+            <input type="color" id="setting-trans-color" value="#ffffff" style="width:100%; height:35px; border:none; border-radius:4px; cursor:pointer;" oninput="updateSetting('transColor', this.value)">
+        </div>
+
+        <div style="margin-bottom:15px;">
+            <label style="display:block; font-size:11px; color:#888; margin-bottom:8px;">原文颜色 / Orig Color</label>
+            <input type="color" id="setting-orig-color" value="#b3b3b3" style="width:100%; height:35px; border:none; border-radius:4px; cursor:pointer;" oninput="updateSetting('origColor', this.value)">
+        </div>
+
+        <div style="margin-bottom:15px;">
+            <label style="display:block; font-size:11px; color:#888; margin-bottom:8px;">背景颜色 / Background</label>
+            <input type="color" id="setting-bg-color" value="#000000" style="width:100%; height:35px; border:none; border-radius:4px; cursor:pointer;" oninput="updateSetting('bgColor', this.value)">
+        </div>
+
+        <button onclick="toggleTextSettings()" style="width:100%; padding:10px; background:var(--accent); border:none; border-radius:6px; color:#fff; font-size:13px; cursor:pointer;">完成 / Done</button>
+    </div>
+
+    <!-- 设置面板遮罩 -->
+    <div id="text-settings-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1999;" onclick="toggleTextSettings()"></div>
 
     <script src="/static/vad/ort.js"></script>
     <script src="/static/vad/my_vad.js"></script>

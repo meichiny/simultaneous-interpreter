@@ -18,6 +18,15 @@
     let activeStreams = [];
     let ttsConfig = { speak: true, listen: true };
 
+    // --- 显示窗口和设置 ---
+    let displayWindow = null;
+    let textSettings = {
+        fontSize: 13,
+        transColor: '#ffffff',
+        origColor: '#b3b3b3',
+        bgColor: '#000000'
+    };
+
     // PCM 流式播放（AudioWorklet 环形缓冲区，消除分段卡顿）
     const TTS_SAMPLE_RATE = 24000;
 
@@ -196,6 +205,56 @@
         } catch (e) { console.error('Glossary Error', e); }
     }
 
+    // --- 通道模式和 TTS 配置 ---
+    window.onChannelModeChange = function() {
+        const mode = document.getElementById('channel-mode').value;
+        const isDual = mode === 'dual';
+
+        // 显示/隐藏双通道相关元素
+        const routingBox = document.getElementById('routing-check-box');
+        const speakerGroup = document.getElementById('speaker-output-group');
+        const theirSpeakBlock = document.querySelector('#lang-their-speak')?.closest('.lang-block');
+
+        if (routingBox) routingBox.style.display = isDual ? 'block' : 'none';
+        if (speakerGroup) speakerGroup.style.display = isDual ? 'block' : 'none';
+
+        // 切换语言配置显示
+        if (theirSpeakBlock) {
+            theirSpeakBlock.style.display = isDual ? 'block' : 'none';
+        }
+
+        // 保存配置到 session
+        sessionStorage.setItem('channelMode', mode);
+    };
+
+    window.onTtsToggle = function() {
+        const enabled = document.getElementById('tts-enable').checked;
+        sessionStorage.setItem('ttsEnabled', enabled ? 'true' : 'false');
+
+        // 显示/隐藏音色选择
+        const voiceBlocks = document.querySelectorAll('#voice-speak, #voice-listen');
+        voiceBlocks.forEach(el => {
+            const parent = el?.closest('.form-group');
+            if (parent) parent.style.display = enabled ? 'block' : 'none';
+        });
+    };
+
+    // 初始化配置 UI
+    function initConfigUI() {
+        // 恢复保存的配置
+        const savedMode = sessionStorage.getItem('channelMode') || 'single';
+        const savedTts = sessionStorage.getItem('ttsEnabled');
+
+        document.getElementById('channel-mode').value = savedMode;
+        if (savedTts !== null) {
+            document.getElementById('tts-enable').checked = savedTts === 'true';
+        }
+
+        // 应用初始状态
+        onChannelModeChange();
+        onTtsToggle();
+    }
+
     // --- 校准 ---
     window.calibrateNoise = async function() {
         const micId = document.getElementById('dev-real-mic').value;
@@ -275,11 +334,17 @@
     // --- 会话控制 ---
     window.startSession = async function() {
         try {
+            // 读取配置
+            const channelMode = document.getElementById('channel-mode')?.value || 'single';
+            const ttsEnabled = document.getElementById('tts-enable')?.checked ?? true;
+            const isDualMode = channelMode === 'dual';
+
             deviceIds.mic = document.getElementById('dev-real-mic').value;
             deviceIds.spk = document.getElementById('dev-real-spk').value;
 
-            const hasCableA = !!virtualCables.cableA_Input_Id;
-            const hasCableB = !!virtualCables.cableB_Output_Id;
+            // 根据模式决定是否检测虚拟声卡
+            const hasCableA = isDualMode && !!virtualCables.cableA_Input_Id;
+            const hasCableB = isDualMode && !!virtualCables.cableB_Output_Id;
 
             const langMySpeak = document.getElementById('lang-my-speak').value;
             const langTheirHear = document.getElementById('lang-their-hear').value;
@@ -288,8 +353,10 @@
 
             modes.speak = langMySpeak === langTheirHear ? 'passthrough' : 'translate';
             modes.listen = langTheirSpeak === langMyHear ? 'passthrough' : 'translate';
-            ttsConfig.speak = langMySpeak !== langTheirHear;
-            ttsConfig.listen = langTheirSpeak !== langMyHear;
+
+            // 根据 TTS 开关配置
+            ttsConfig.speak = ttsEnabled && (langMySpeak !== langTheirHear);
+            ttsConfig.listen = ttsEnabled && (langTheirSpeak !== langMyHear);
 
             // 语言方向校验
             const zhEn = ['zh', 'en'];
@@ -318,8 +385,30 @@
 
             document.getElementById('section-dashboard').style.display = 'none';
             document.getElementById('section-action').style.display = 'flex';
-            document.getElementById('ab-listen').style.display = hasCableB ? 'flex' : 'none';
-            document.getElementById('ab-speak').style.flex = '1';
+
+            // 根据模式设置 action-body 类
+            const actionBody = document.querySelector('.action-body');
+            if (actionBody) {
+                if (hasCableB) {
+                    actionBody.classList.remove('single-channel');
+                } else {
+                    actionBody.classList.add('single-channel');
+                }
+            }
+
+            // 根据模式显示/隐藏 listen 面板
+            const abListen = document.getElementById('ab-listen');
+            const abSpeak = document.getElementById('ab-speak');
+            if (abListen) {
+                abListen.style.display = hasCableB ? 'flex' : 'none';
+            }
+            if (abSpeak) {
+                abSpeak.style.flex = hasCableB ? '1' : '1';
+                // 单通道模式下占据全宽
+                if (!hasCableB && abListen) {
+                    abSpeak.style.width = '100%';
+                }
+            }
 
             const pCableA = document.getElementById('player-for-cable-a');
             if (hasCableA) {
@@ -378,6 +467,17 @@
         document.getElementById('section-dashboard').style.display = 'flex';
         const al = document.getElementById('ab-listen');
         if (al) al.style.display = 'flex';
+
+        // 重置 action-body 类
+        const actionBody = document.querySelector('.action-body');
+        if (actionBody) {
+            actionBody.classList.remove('single-channel');
+        }
+
+        // 清除显示窗口内容
+        if (displayWindow && !displayWindow.closed) {
+            displayWindow.postMessage({ type: 'clear' }, '*');
+        }
     };
 
     // --- 音频流 + VAD 接入 SocketHandler ---
@@ -491,6 +591,62 @@
 
     // scheduleBuffer 已被 AudioWorklet 替代
 
+    // --- 显示窗口功能 ---
+    window.openDisplayWindow = function() {
+        if (displayWindow && !displayWindow.closed) {
+            displayWindow.focus();
+            return;
+        }
+        // 从 localStorage 读取显示窗口保存的设置
+        const savedSettings = JSON.parse(localStorage.getItem('displaySettings') || '{}');
+        const params = new URLSearchParams();
+        if (savedSettings.fontSize) params.set('fs', savedSettings.fontSize);
+        if (savedSettings.lineHeight) params.set('lh', savedSettings.lineHeight);
+        if (savedSettings.textColor) params.set('tc', savedSettings.textColor.replace('#', ''));
+        if (savedSettings.bgColor) params.set('bc', savedSettings.bgColor.replace('#', ''));
+
+        const url = '/display' + (params.toString() ? '?' + params.toString() : '');
+        displayWindow = window.open(url, 'translationDisplay', 'width=800,height=600,location=no,menubar=no,toolbar=no');
+    };
+
+    window.toggleTextSettings = function() {
+        const panel = document.getElementById('text-settings-panel');
+        const overlay = document.getElementById('text-settings-overlay');
+        if (panel.style.display === 'none') {
+            panel.style.display = 'block';
+            overlay.style.display = 'block';
+        } else {
+            panel.style.display = 'none';
+            overlay.style.display = 'none';
+        }
+    };
+
+    window.updateSetting = function(key, value) {
+        textSettings[key] = value;
+
+        // 更新UI显示值
+        if (key === 'fontSize') {
+            document.getElementById('setting-size-value').innerText = value;
+            // 更新主窗口样式
+            document.documentElement.style.setProperty('--trans-font-size', value + 'px');
+        } else if (key === 'transColor') {
+            document.documentElement.style.setProperty('--trans-text-color', value);
+        } else if (key === 'origColor') {
+            document.documentElement.style.setProperty('--orig-text-color', value);
+        } else if (key === 'bgColor') {
+            document.documentElement.style.setProperty('--action-bg-color', value);
+        }
+
+        // 同步到显示窗口
+        if (displayWindow && !displayWindow.closed) {
+            const syncData = { type: 'settings' };
+            if (key === 'fontSize') syncData.fontSize = value;
+            if (key === 'transColor') syncData.textColor = value;
+            if (key === 'bgColor') syncData.bgColor = value;
+            displayWindow.postMessage(syncData, '*');
+        }
+    };
+
     // --- 字幕更新 ---
     function updateText(prefix, data) {
         const pendingTrans = document.getElementById(`pending-trans-${prefix}`);
@@ -523,6 +679,17 @@
         } else if (targetPending) { targetPending.innerText = data.text || '...'; }
         if (paneTrans) requestAnimationFrame(() => { paneTrans.scrollTop = paneTrans.scrollHeight; });
         if (paneOrig) requestAnimationFrame(() => { paneOrig.scrollTop = paneOrig.scrollHeight; });
+
+        // 发送文本到显示窗口
+        if (displayWindow && !displayWindow.closed) {
+            const isTop = (prefix === 'speak' && isTranslated) || (prefix === 'listen' && !isTranslated);
+            displayWindow.postMessage({
+                type: 'textUpdate',
+                position: isTop ? 'top' : 'bottom',
+                text: data.text,
+                isFinal: data.isFinal
+            }, '*');
+        }
     }
 
     // --- SocketIO 事件绑定 ---
@@ -600,6 +767,7 @@
     // --- DOMContentLoaded ---
     document.addEventListener('DOMContentLoaded', async () => {
         initLangSync();
+        initConfigUI(); // 初始化通道模式和 TTS 配置
         try { await navigator.mediaDevices.getUserMedia({ audio: true }); } catch (e) { alert('请允许麦克风权限 / Please Allow Mic Permission'); }
         await initDevices();
         loadGlossary();
