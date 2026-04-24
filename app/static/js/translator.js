@@ -169,6 +169,20 @@
         checkStartButtonState();
     }
 
+    // 计费信息显示
+    function updateBillingUI(data) {
+        const totalTokens = data.total_tokens || 0;
+        const el = document.getElementById('act-billing');
+        if (el) {
+            // 格式化显示：超过1000显示为 x.xk
+            if (totalTokens >= 1000) {
+                el.innerText = (totalTokens / 1000).toFixed(1) + 'k tokens';
+            } else {
+                el.innerText = totalTokens + ' tokens';
+            }
+        }
+    }
+
     function checkStartButtonState() {
         const btn = document.getElementById('startBtn');
         if (currentLatency > HIGH_LATENCY_THRESHOLD) {
@@ -981,6 +995,7 @@
         socket.on('tts_sentence_end_listen', () => {});
         socket.on('text_update_speak', d => updateText('speak', d));
         socket.on('text_update_listen', d => updateText('listen', d));
+        socket.on('billing_update', d => updateBillingUI(d));
 
         setInterval(() => { if (socket.connected) socket.emit('ping_from_client', { t: Date.now() }); }, 2000);
         if (socket.connected) updateStatus('connected', '服务已连接 / Service Connected');

@@ -23,7 +23,7 @@ WS_PING_TIMEOUT = 10
 MAX_RETRY_ATTEMPTS = 3
 RETRY_DELAY = 2
 
-async def doubao_translator(socketio, sid, lang_from, lang_to, audio_queue, stop_event, event_prefix, mode, glossary=None, speaker_id=None, transcript_collector=None):
+async def doubao_translator(socketio, sid, lang_from, lang_to, audio_queue, stop_event, event_prefix, mode, glossary=None, speaker_id=None, transcript_collector=None, billing_collector=None):
     if not Config.VOLCANO_APP_KEY or not Config.VOLCANO_ACCESS_KEY:
         error_msg = "火山引擎API密钥未配置"
         logging.error(f"[{event_prefix}][{sid}] {error_msg}")
@@ -34,6 +34,14 @@ async def doubao_translator(socketio, sid, lang_from, lang_to, audio_queue, stop
 
     session_id = str(uuid.uuid4())
     conn_id = str(uuid.uuid4())
+
+    # 计费统计
+    billing_stats = {
+        'input_audio_tokens': 0,
+        'output_text_tokens': 0,
+        'output_audio_tokens': 0,
+        'duration_msec': 0
+    }
     ws_url = "wss://openspeech.bytedance.com/api/v4/ast/v2/translate"
     resource_id = "volc.service_type.10053"
 
@@ -200,11 +208,30 @@ async def doubao_translator(socketio, sid, lang_from, lang_to, audio_queue, stop
                                     # 计量事件：记录实际音频时长和token消耗
                                     billing = response.response_meta.billing if hasattr(response.response_meta, 'billing') else None
                                     if billing:
+                                        # 累计音频时长
                                         duration_ms = getattr(billing, 'duration_msec', 0)
+                                        billing_stats['duration_msec'] += duration_ms
+
+                                        # 累计token消耗
+                                        if hasattr(billing, 'items'):
+                                            for item in billing.items:
+                                                unit = getattr(item, 'unit', '')
+                                                quantity = getattr(item, 'quantity', 0)
+                                                if unit == 'input_audio_tokens':
+                                                    billing_stats['input_audio_tokens'] += quantity
+                                                elif unit == 'output_text_tokens':
+                                                    billing_stats['output_text_tokens'] += quantity
+                                                elif unit == 'output_audio_tokens':
+                                                    billing_stats['output_audio_tokens'] += quantity
+
+                                        # 发送到计费收集器（用于多通道合并）
+                                        if billing_collector is not None:
+                                            billing_collector[billing_stats['duration_msec']] = billing_stats.copy()
+
                                         socketio.emit(f'usage_update_{event_prefix}',
                                                      {'duration_ms': duration_ms},
                                                      to=sid)
-                                        logging.info(f"[{event_prefix}][{sid}] 计量: {duration_ms}ms")
+                                        logging.info(f"[{event_prefix}][{sid}] 计量: audio_in={billing_stats['input_audio_tokens']:.0f}, text_out={billing_stats['output_text_tokens']:.0f}, audio_out={billing_stats['output_audio_tokens']:.0f}, duration={duration_ms}ms")
                                 elif event_type == Type.AudioMuted:
                                     # 静音检测事件：通知前端显示"检测到静音"提示
                                     muted_ms = getattr(response, 'muted_duration_ms', 0)

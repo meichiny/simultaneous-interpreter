@@ -146,7 +146,13 @@ def register_socket_handlers(socketio, app):
             'loop': loop,
             'start_time': time.time(),
             'transcript': [],
-            'meeting_id': meeting.id
+            'meeting_id': meeting.id,
+            'billing_stats': {
+                'input_audio_tokens': 0,
+                'output_text_tokens': 0,
+                'output_audio_tokens': 0,
+                'duration_msec': 0
+            }
         }
 
         with sessions_lock:
@@ -217,6 +223,7 @@ def session_manager_task(sid, loop, app, socketio):
                 listen_config = session_data.get('listen_config', {})
 
                 transcript = session_data.get('transcript', [])
+                billing_stats = session_data.get('billing_stats', {})
 
                 if speak_config.get('mode') == 'translate':
                     lang_from, lang_to = speak_config.get('direction', 'zh-en').split('-')
@@ -225,7 +232,8 @@ def session_manager_task(sid, loop, app, socketio):
                         session_data['speak_queue'], current_translator_stop_event,
                         'speak', 's2s', glossary=speak_config.get('glossary'),
                         speaker_id=speak_config.get('speaker_id', ''),
-                        transcript_collector=transcript
+                        transcript_collector=transcript,
+                        billing_collector=billing_stats
                     ))
 
                 if listen_config and listen_config.get('mode') == 'translate':
@@ -235,7 +243,8 @@ def session_manager_task(sid, loop, app, socketio):
                         session_data['listen_queue'], current_translator_stop_event,
                         'listen', 's2s', glossary=listen_config.get('glossary'),
                         speaker_id=listen_config.get('speaker_id', ''),
-                        transcript_collector=transcript
+                        transcript_collector=transcript,
+                        billing_collector=billing_stats
                     ))
 
                 async def monitor_signals():
@@ -255,9 +264,32 @@ def session_manager_task(sid, loop, app, socketio):
                             current_translator_stop_event.set()
                             return
 
+                async def billing_reporter():
+                    """每5秒推送一次计费统计"""
+                    while not current_translator_stop_event.is_set():
+                        await asyncio.sleep(5)
+                        if current_translator_stop_event.is_set():
+                            break
+                        stats = session_data.get('billing_stats', {})
+                        total_tokens = (
+                            stats.get('input_audio_tokens', 0) +
+                            stats.get('output_text_tokens', 0) +
+                            stats.get('output_audio_tokens', 0)
+                        )
+                        duration_sec = stats.get('duration_msec', 0) / 1000
+                        socketio.emit('billing_update', {
+                            'total_tokens': int(total_tokens),
+                            'duration_sec': round(duration_sec, 1),
+                            'input_audio_tokens': int(stats.get('input_audio_tokens', 0)),
+                            'output_text_tokens': int(stats.get('output_text_tokens', 0)),
+                            'output_audio_tokens': int(stats.get('output_audio_tokens', 0))
+                        }, to=sid)
+                        app.logger.debug(f"Session {sid} billing update: {total_tokens} tokens, {duration_sec}s")
+
                 tasks.append(monitor_signals())
+                tasks.append(billing_reporter())
                 if tasks:
-                    await asyncio.gather(*tasks)
+                    await asyncio.gather(*tasks, return_exceptions=True)
 
             loop.run_until_complete(run_tasks())
 
