@@ -243,6 +243,9 @@ async def doubao_translator(socketio, sid, lang_from, lang_to, audio_queue, stop
                                     socketio.emit(f'audio_muted_{event_prefix}',
                                                  {'muted_ms': muted_ms},
                                                  to=sid)
+                                else:
+                                    # 记录未处理的事件类型
+                                    logging.debug(f"[{event_prefix}][{sid}] 未处理的事件类型: {event_type} (Type.UsageResponse={Type.UsageResponse})")
 
                             except asyncio.TimeoutError:
                                 continue

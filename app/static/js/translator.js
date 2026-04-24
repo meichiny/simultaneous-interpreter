@@ -171,6 +171,7 @@
 
     // 计费信息显示
     function updateBillingUI(data) {
+        console.log('[Billing] 收到 billing_update:', data);
         const totalTokens = data.total_tokens || 0;
         const el = document.getElementById('act-billing');
         if (el) {
@@ -180,6 +181,9 @@
             } else {
                 el.innerText = totalTokens + ' tokens';
             }
+            console.log('[Billing] UI 已更新:', el.innerText);
+        } else {
+            console.warn('[Billing] 未找到 act-billing 元素');
         }
     }
 
