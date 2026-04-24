@@ -155,12 +155,15 @@ async def doubao_translator(socketio, sid, lang_from, lang_to, audio_queue, stop
 
                 async def receiver():
                     try:
+                        msg_count = 0
                         while not stop_event.is_set():
                             try:
                                 message = await asyncio.wait_for(ws.recv(), timeout=1.0)
+                                msg_count += 1
                                 response = TranslateResponse()
                                 response.ParseFromString(message)
                                 event_type = response.event
+                                logging.info(f"[{event_prefix}][{sid}] 收到消息 #{msg_count}, 事件类型: {event_type}")
 
                                 if event_type == Type.SessionFinished:
                                     logging.info(f"[{event_prefix}][{sid}] 会话正常结束")
