@@ -161,17 +161,21 @@ async def doubao_translator(socketio, sid, lang_from, lang_to, audio_queue, stop
                             logging.debug(f"[{event_prefix}][{sid}] 发送结束信号失败（连接可能已断开）: {e}")
 
                 async def receiver():
+                    print(f"[DEBUG][{event_prefix}][{sid}] receiver 协程启动", flush=True)
                     try:
                         msg_count = 0
                         while not stop_event.is_set():
                             try:
+                                print(f"[DEBUG][{event_prefix}][{sid}] 等待接收消息...", flush=True)
                                 message = await asyncio.wait_for(ws.recv(), timeout=1.0)
                                 msg_count += 1
+                                print(f"[DEBUG][{event_prefix}][{sid}] 收到原始消息 #{msg_count}, 长度={len(message)}", flush=True)
                                 response = TranslateResponse()
                                 response.ParseFromString(message)
                                 event_type = response.event
 
                                 # 打印所有事件类型的原始值
+                                print(f"[DEBUG][{event_prefix}][{sid}] 解析成功: 事件类型={event_type} (原始值={int(event_type)})", flush=True)
                                 logging.info(f"[{event_prefix}][{sid}] 收到消息 #{msg_count}, 事件类型: {event_type} (原始值={int(event_type)})")
 
                                 # 打印 TranslateResponse 的所有字段
