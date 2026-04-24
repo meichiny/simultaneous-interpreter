@@ -287,8 +287,15 @@ async def doubao_translator(socketio, sid, lang_from, lang_to, audio_queue, stop
                                                  {'muted_ms': muted_ms},
                                                  to=sid)
                                 else:
-                                    # 记录未处理的事件类型
-                                    logging.debug(f"[{event_prefix}][{sid}] 未处理的事件类型: {event_type} (Type.UsageResponse={Type.UsageResponse})")
+                                    # 记录未处理的事件类型及其详细信息
+                                    logging.info(f"[{event_prefix}][{sid}] 未处理的事件类型: {event_type} (值={event_type})")
+                                    try:
+                                        meta = response.response_meta
+                                        logging.info(f"[{event_prefix}][{sid}] 该事件的 response_meta: {meta}, dir={dir(meta)}")
+                                        if hasattr(meta, 'billing'):
+                                            logging.info(f"[{event_prefix}][{sid}] 该事件的 billing: {meta.billing}")
+                                    except Exception as e:
+                                        logging.info(f"[{event_prefix}][{sid}] 获取 response_meta 失败: {e}")
 
                             except asyncio.TimeoutError:
                                 continue
