@@ -26,6 +26,10 @@ MAX_RETRY_ATTEMPTS = 3
 RETRY_DELAY = 2
 
 async def doubao_translator(socketio, sid, lang_from, lang_to, audio_queue, stop_event, event_prefix, mode, glossary=None, speaker_id=None, transcript_collector=None, billing_collector=None):
+    # 最基础的入口调试
+    print(f"[DEBUG][{event_prefix}][{sid}] doubao_translator 函数被调用", flush=True)
+    logging.info(f"[DEBUG][{event_prefix}][{sid}] doubao_translator 函数被调用 - logging")
+
     if not Config.VOLCANO_APP_KEY or not Config.VOLCANO_ACCESS_KEY:
         error_msg = "火山引擎API密钥未配置"
         logging.error(f"[{event_prefix}][{sid}] {error_msg}")
