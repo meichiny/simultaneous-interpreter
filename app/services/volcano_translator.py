@@ -266,14 +266,10 @@ async def doubao_translator(socketio, sid, lang_from, lang_to, audio_queue, stop
                                     socketio.emit(f'tts_sentence_end_{event_prefix}', to=sid)
                                 elif event_type == Type.UsageResponse:
                                     # 计量事件：记录实际音频时长和token消耗
-                                    logging.info(f"[{event_prefix}][{sid}] 收到 UsageResponse 事件")
-                                    logging.info(f"[{event_prefix}][{sid}] UsageResponse response_meta: {response.response_meta}")
+                                    print(f"[DEBUG][{event_prefix}][{sid}] ===== 收到 UsageResponse 事件 =====", flush=True)
                                     billing = response.response_meta.billing if hasattr(response.response_meta, 'billing') else None
+                                    print(f"[DEBUG][{event_prefix}][{sid}] billing: {billing}", flush=True)
                                     if billing:
-                                        logging.info(f"[{event_prefix}][{sid}] billing 对象存在: {billing}")
-                                        logging.info(f"[{event_prefix}][{sid}] billing 字段: {dir(billing)}")
-                                        if hasattr(billing, 'items'):
-                                            logging.info(f"[{event_prefix}][{sid}] billing items 内容: {list(billing.items)}")
                                         # 累计音频时长
                                         duration_ms = getattr(billing, 'duration_msec', 0)
                                         billing_stats['duration_msec'] += duration_ms
