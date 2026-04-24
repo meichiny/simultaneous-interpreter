@@ -8,6 +8,8 @@ from datetime import datetime, timezone
 from websockets.exceptions import ConnectionClosed, InvalidStatus, InvalidURI
 from app.config import Config
 
+logging.info("[volcano_translator] 模块加载成功")
+
 # Protobuf 路径：从 app/services/ 向上两级到项目根目录
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 protogen_dir = os.path.join(project_root, "python_protogen")
