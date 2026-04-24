@@ -164,6 +164,22 @@ async def doubao_translator(socketio, sid, lang_from, lang_to, audio_queue, stop
 
                                 if event_type == Type.SessionFinished:
                                     logging.info(f"[{event_prefix}][{sid}] 会话正常结束")
+                                    # 会话结束时获取最终计费信息
+                                    billing = response.response_meta.billing if hasattr(response.response_meta, 'billing') else None
+                                    if billing:
+                                        logging.info(f"[{event_prefix}][{sid}] 会话结束计费信息: {billing}")
+                                        duration_ms = getattr(billing, 'duration_msec', 0)
+                                        billing_stats['duration_msec'] += duration_ms
+                                        if hasattr(billing, 'items'):
+                                            for item in billing.items:
+                                                unit = getattr(item, 'unit', '')
+                                                quantity = getattr(item, 'quantity', 0)
+                                                if unit == 'input_audio_tokens':
+                                                    billing_stats['input_audio_tokens'] += quantity
+                                                elif unit == 'output_text_tokens':
+                                                    billing_stats['output_text_tokens'] += quantity
+                                                elif unit == 'output_audio_tokens':
+                                                    billing_stats['output_audio_tokens'] += quantity
                                     break
                                 elif event_type == Type.SessionFailed:
                                     error_msg = getattr(response.response_meta, 'Message', '会话失败')
