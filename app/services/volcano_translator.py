@@ -164,22 +164,31 @@ async def doubao_translator(socketio, sid, lang_from, lang_to, audio_queue, stop
 
                                 if event_type == Type.SessionFinished:
                                     logging.info(f"[{event_prefix}][{sid}] 会话正常结束")
+                                    # 调试：打印完整的 response_meta
+                                    response_meta = response.response_meta
+                                    logging.info(f"[{event_prefix}][{sid}] SessionFinished response_meta: {response_meta}")
+                                    logging.info(f"[{event_prefix}][{sid}] response_meta 字段: {dir(response_meta)}")
                                     # 会话结束时获取最终计费信息
                                     billing = response.response_meta.billing if hasattr(response.response_meta, 'billing') else None
                                     if billing:
                                         logging.info(f"[{event_prefix}][{sid}] 会话结束计费信息: {billing}")
+                                        logging.info(f"[{event_prefix}][{sid}] billing 字段: {dir(billing)}")
                                         duration_ms = getattr(billing, 'duration_msec', 0)
                                         billing_stats['duration_msec'] += duration_ms
                                         if hasattr(billing, 'items'):
+                                            logging.info(f"[{event_prefix}][{sid}] billing items: {list(billing.items)}")
                                             for item in billing.items:
                                                 unit = getattr(item, 'unit', '')
                                                 quantity = getattr(item, 'quantity', 0)
+                                                logging.info(f"[{event_prefix}][{sid}] billing item: unit={unit}, quantity={quantity}")
                                                 if unit == 'input_audio_tokens':
                                                     billing_stats['input_audio_tokens'] += quantity
                                                 elif unit == 'output_text_tokens':
                                                     billing_stats['output_text_tokens'] += quantity
                                                 elif unit == 'output_audio_tokens':
                                                     billing_stats['output_audio_tokens'] += quantity
+                                    else:
+                                        logging.warning(f"[{event_prefix}][{sid}] SessionFinished 中没有 billing 信息")
                                     break
                                 elif event_type == Type.SessionFailed:
                                     error_msg = getattr(response.response_meta, 'Message', '会话失败')
@@ -226,9 +235,13 @@ async def doubao_translator(socketio, sid, lang_from, lang_to, audio_queue, stop
                                 elif event_type == Type.UsageResponse:
                                     # 计量事件：记录实际音频时长和token消耗
                                     logging.info(f"[{event_prefix}][{sid}] 收到 UsageResponse 事件")
+                                    logging.info(f"[{event_prefix}][{sid}] UsageResponse response_meta: {response.response_meta}")
                                     billing = response.response_meta.billing if hasattr(response.response_meta, 'billing') else None
                                     if billing:
                                         logging.info(f"[{event_prefix}][{sid}] billing 对象存在: {billing}")
+                                        logging.info(f"[{event_prefix}][{sid}] billing 字段: {dir(billing)}")
+                                        if hasattr(billing, 'items'):
+                                            logging.info(f"[{event_prefix}][{sid}] billing items 内容: {list(billing.items)}")
                                         # 累计音频时长
                                         duration_ms = getattr(billing, 'duration_msec', 0)
                                         billing_stats['duration_msec'] += duration_ms
