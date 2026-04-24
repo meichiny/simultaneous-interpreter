@@ -284,7 +284,7 @@ def session_manager_task(sid, loop, app, socketio):
                             'output_text_tokens': int(stats.get('output_text_tokens', 0)),
                             'output_audio_tokens': int(stats.get('output_audio_tokens', 0))
                         }, to=sid)
-                        app.logger.debug(f"Session {sid} billing update: {total_tokens} tokens, {duration_sec}s")
+                        app.logger.info(f"Session {sid} billing_update 已发送: {int(total_tokens)} tokens, {round(duration_sec, 1)}s")
 
                 tasks.append(monitor_signals())
                 tasks.append(billing_reporter())

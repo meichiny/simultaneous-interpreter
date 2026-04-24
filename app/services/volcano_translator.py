@@ -35,13 +35,16 @@ async def doubao_translator(socketio, sid, lang_from, lang_to, audio_queue, stop
     session_id = str(uuid.uuid4())
     conn_id = str(uuid.uuid4())
 
-    # 计费统计
-    billing_stats = {
-        'input_audio_tokens': 0,
-        'output_text_tokens': 0,
-        'output_audio_tokens': 0,
-        'duration_msec': 0
-    }
+    # 计费统计 - 使用传入的 billing_collector 或创建新的
+    if billing_collector is not None:
+        billing_stats = billing_collector
+    else:
+        billing_stats = {
+            'input_audio_tokens': 0,
+            'output_text_tokens': 0,
+            'output_audio_tokens': 0,
+            'duration_msec': 0
+        }
     ws_url = "wss://openspeech.bytedance.com/api/v4/ast/v2/translate"
     resource_id = "volc.service_type.10053"
 
@@ -206,8 +209,10 @@ async def doubao_translator(socketio, sid, lang_from, lang_to, audio_queue, stop
                                     socketio.emit(f'tts_sentence_end_{event_prefix}', to=sid)
                                 elif event_type == Type.UsageResponse:
                                     # 计量事件：记录实际音频时长和token消耗
+                                    logging.info(f"[{event_prefix}][{sid}] 收到 UsageResponse 事件")
                                     billing = response.response_meta.billing if hasattr(response.response_meta, 'billing') else None
                                     if billing:
+                                        logging.info(f"[{event_prefix}][{sid}] billing 对象存在: {billing}")
                                         # 累计音频时长
                                         duration_ms = getattr(billing, 'duration_msec', 0)
                                         billing_stats['duration_msec'] += duration_ms
