@@ -76,6 +76,7 @@ async def doubao_translator(socketio, sid, lang_from, lang_to, audio_queue, stop
                 close_timeout=10
             ) as ws:
                 logging.info(f"[{event_prefix}][{sid}] 翻译WebSocket连接成功 (尝试 {attempt + 1}/{MAX_RETRY_ATTEMPTS})")
+                print(f"[DEBUG][{event_prefix}][{sid}] WebSocket连接成功，准备发送StartSession", flush=True)
 
                 request_payload = {'mode': mode, 'source_language': lang_from, 'target_language': lang_to}
 
@@ -335,7 +336,13 @@ async def doubao_translator(socketio, sid, lang_from, lang_to, audio_queue, stop
                     except Exception as e:
                         logging.error(f"[{event_prefix}][{sid}] Receiver outer error: {e}")
 
-                await asyncio.gather(sender(), receiver(), return_exceptions=True)
+                print(f"[DEBUG][{event_prefix}][{sid}] 准备启动 sender 和 receiver 协程", flush=True)
+                try:
+                    await asyncio.gather(sender(), receiver(), return_exceptions=True)
+                    print(f"[DEBUG][{event_prefix}][{sid}] sender 和 receiver 协程已完成", flush=True)
+                except Exception as e:
+                    print(f"[DEBUG][{event_prefix}][{sid}] sender/receiver 异常: {e}", flush=True)
+                    logging.error(f"[{event_prefix}][{sid}] sender/receiver 异常: {e}")
                 break
 
         except (ConnectionClosed, InvalidStatus, InvalidURI) as e:
