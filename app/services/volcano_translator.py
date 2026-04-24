@@ -165,7 +165,25 @@ async def doubao_translator(socketio, sid, lang_from, lang_to, audio_queue, stop
                                 response = TranslateResponse()
                                 response.ParseFromString(message)
                                 event_type = response.event
-                                logging.info(f"[{event_prefix}][{sid}] 收到消息 #{msg_count}, 事件类型: {event_type}")
+
+                                # 打印所有事件类型的原始值
+                                logging.info(f"[{event_prefix}][{sid}] 收到消息 #{msg_count}, 事件类型: {event_type} (原始值={int(event_type)})")
+
+                                # 打印 TranslateResponse 的所有字段
+                                try:
+                                    fields = {}
+                                    for field in response.DESCRIPTOR.fields:
+                                        val = getattr(response, field.name)
+                                        if field.name == 'response_meta' and val:
+                                            meta_fields = {}
+                                            for mf in val.DESCRIPTOR.fields:
+                                                meta_fields[mf.name] = str(getattr(val, mf.name))[:100]
+                                            fields[field.name] = meta_fields
+                                        elif field.name not in ['data', 'text']:
+                                            fields[field.name] = str(val)[:100]
+                                    logging.info(f"[{event_prefix}][{sid}] 消息字段: {fields}")
+                                except Exception as e:
+                                    logging.info(f"[{event_prefix}][{sid}] 获取字段失败: {e}")
 
                                 if event_type == Type.SessionFinished:
                                     logging.info(f"[{event_prefix}][{sid}] 会话正常结束")
