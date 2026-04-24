@@ -225,9 +225,11 @@ def session_manager_task(sid, loop, app, socketio):
                 transcript = session_data.get('transcript', [])
                 billing_stats = session_data.get('billing_stats', {})
 
+                app.logger.info(f"[Socket][{sid}] run_tasks 开始, speak_config={speak_config}, listen_config={listen_config}")
+
                 if speak_config.get('mode') == 'translate':
                     lang_from, lang_to = speak_config.get('direction', 'zh-en').split('-')
-                    logging.info(f"[Socket][{sid}] 启动 speak 通道翻译任务")
+                    app.logger.info(f"[Socket][{sid}] 启动 speak 通道翻译任务")
                     tasks.append(doubao_translator(
                         socketio, sid, lang_from, lang_to,
                         session_data['speak_queue'], current_translator_stop_event,
