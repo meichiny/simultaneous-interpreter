@@ -26,9 +26,6 @@ MAX_RETRY_ATTEMPTS = 3
 RETRY_DELAY = 2
 
 async def doubao_translator(socketio, sid, lang_from, lang_to, audio_queue, stop_event, event_prefix, mode, glossary=None, speaker_id=None, transcript_collector=None, billing_collector=None):
-    # 最基础的入口调试
-    print(f"[DEBUG][{event_prefix}][{sid}] doubao_translator 函数被调用", flush=True)
-    logging.info(f"[DEBUG][{event_prefix}][{sid}] doubao_translator 函数被调用 - logging")
 
     if not Config.VOLCANO_APP_KEY or not Config.VOLCANO_ACCESS_KEY:
         error_msg = "火山引擎API密钥未配置"
@@ -76,7 +73,6 @@ async def doubao_translator(socketio, sid, lang_from, lang_to, audio_queue, stop
                 close_timeout=10
             ) as ws:
                 logging.info(f"[{event_prefix}][{sid}] 翻译WebSocket连接成功 (尝试 {attempt + 1}/{MAX_RETRY_ATTEMPTS})")
-                print(f"[DEBUG][{event_prefix}][{sid}] WebSocket连接成功，准备发送StartSession", flush=True)
 
                 request_payload = {'mode': mode, 'source_language': lang_from, 'target_language': lang_to}
 
@@ -161,57 +157,26 @@ async def doubao_translator(socketio, sid, lang_from, lang_to, audio_queue, stop
                             logging.debug(f"[{event_prefix}][{sid}] 发送结束信号失败（连接可能已断开）: {e}")
 
                 async def receiver():
-                    print(f"[DEBUG][{event_prefix}][{sid}] receiver 协程启动", flush=True)
                     try:
-                        msg_count = 0
                         while not stop_event.is_set():
                             try:
-                                print(f"[DEBUG][{event_prefix}][{sid}] 等待接收消息...", flush=True)
                                 message = await asyncio.wait_for(ws.recv(), timeout=1.0)
-                                msg_count += 1
-                                print(f"[DEBUG][{event_prefix}][{sid}] 收到原始消息 #{msg_count}, 长度={len(message)}", flush=True)
                                 response = TranslateResponse()
                                 response.ParseFromString(message)
                                 event_type = response.event
 
-                                # 打印所有事件类型的原始值
-                                print(f"[DEBUG][{event_prefix}][{sid}] 解析成功: 事件类型={event_type} (原始值={int(event_type)})", flush=True)
-                                logging.info(f"[{event_prefix}][{sid}] 收到消息 #{msg_count}, 事件类型: {event_type} (原始值={int(event_type)})")
-
-                                # 打印 TranslateResponse 的所有字段
-                                try:
-                                    fields = {}
-                                    for field in response.DESCRIPTOR.fields:
-                                        val = getattr(response, field.name)
-                                        if field.name == 'response_meta' and val:
-                                            meta_fields = {}
-                                            for mf in val.DESCRIPTOR.fields:
-                                                meta_fields[mf.name] = str(getattr(val, mf.name))[:100]
-                                            fields[field.name] = meta_fields
-                                        elif field.name not in ['data', 'text']:
-                                            fields[field.name] = str(val)[:100]
-                                    logging.info(f"[{event_prefix}][{sid}] 消息字段: {fields}")
-                                except Exception as e:
-                                    logging.info(f"[{event_prefix}][{sid}] 获取字段失败: {e}")
-
                                 if event_type == Type.SessionFinished:
                                     logging.info(f"[{event_prefix}][{sid}] 会话正常结束")
-                                    # 调试：打印完整的 response_meta
-                                    response_meta = response.response_meta
-                                    logging.info(f"[{event_prefix}][{sid}] SessionFinished response_meta: {response_meta}")
-                                    logging.info(f"[{event_prefix}][{sid}] response_meta 字段: {dir(response_meta)}")
                                     # 会话结束时获取最终计费信息
-                                    billing = response.response_meta.billing if hasattr(response.response_meta, 'billing') else None
+                                    billing = response.response_meta.Billing if hasattr(response.response_meta, 'Billing') else None
                                     if billing:
-                                        logging.info(f"[{event_prefix}][{sid}] 会话结束计费信息: {billing}")
-                                        logging.info(f"[{event_prefix}][{sid}] billing 字段: {dir(billing)}")
-                                        duration_ms = getattr(billing, 'duration_msec', 0)
+                                        logging.info(f"[{event_prefix}][{sid}] 会话结束计费信息")
+                                        duration_ms = getattr(billing, 'DurationMsec', 0)
                                         billing_stats['duration_msec'] += duration_ms
-                                        if hasattr(billing, 'items'):
-                                            logging.info(f"[{event_prefix}][{sid}] billing items: {list(billing.items)}")
-                                            for item in billing.items:
-                                                unit = getattr(item, 'unit', '')
-                                                quantity = getattr(item, 'quantity', 0)
+                                        if hasattr(billing, 'Items'):
+                                            for item in billing.Items:
+                                                unit = getattr(item, 'Unit', '')
+                                                quantity = getattr(item, 'Quantity', 0)
                                                 logging.info(f"[{event_prefix}][{sid}] billing item: unit={unit}, quantity={quantity}")
                                                 if unit == 'input_audio_tokens':
                                                     billing_stats['input_audio_tokens'] += quantity
@@ -266,29 +231,23 @@ async def doubao_translator(socketio, sid, lang_from, lang_to, audio_queue, stop
                                     socketio.emit(f'tts_sentence_end_{event_prefix}', to=sid)
                                 elif event_type == Type.UsageResponse:
                                     # 计量事件：记录实际音频时长和token消耗
-                                    print(f"[DEBUG][{event_prefix}][{sid}] ===== 收到 UsageResponse 事件 =====", flush=True)
-                                    billing = response.response_meta.billing if hasattr(response.response_meta, 'billing') else None
-                                    print(f"[DEBUG][{event_prefix}][{sid}] billing: {billing}", flush=True)
+                                    billing = response.response_meta.Billing if hasattr(response.response_meta, 'Billing') else None
                                     if billing:
                                         # 累计音频时长
-                                        duration_ms = getattr(billing, 'duration_msec', 0)
+                                        duration_ms = getattr(billing, 'DurationMsec', 0)
                                         billing_stats['duration_msec'] += duration_ms
 
                                         # 累计token消耗
-                                        if hasattr(billing, 'items'):
-                                            for item in billing.items:
-                                                unit = getattr(item, 'unit', '')
-                                                quantity = getattr(item, 'quantity', 0)
+                                        if hasattr(billing, 'Items'):
+                                            for item in billing.Items:
+                                                unit = getattr(item, 'Unit', '')
+                                                quantity = getattr(item, 'Quantity', 0)
                                                 if unit == 'input_audio_tokens':
                                                     billing_stats['input_audio_tokens'] += quantity
                                                 elif unit == 'output_text_tokens':
                                                     billing_stats['output_text_tokens'] += quantity
                                                 elif unit == 'output_audio_tokens':
                                                     billing_stats['output_audio_tokens'] += quantity
-
-                                        # 发送到计费收集器（用于多通道合并）
-                                        if billing_collector is not None:
-                                            billing_collector[billing_stats['duration_msec']] = billing_stats.copy()
 
                                         # 立即推送计费更新到前端
                                         total_tokens = (
@@ -307,7 +266,6 @@ async def doubao_translator(socketio, sid, lang_from, lang_to, audio_queue, stop
                                         socketio.emit(f'usage_update_{event_prefix}',
                                                      {'duration_ms': duration_ms},
                                                      to=sid)
-                                        logging.info(f"[{event_prefix}][{sid}] 计量: audio_in={billing_stats['input_audio_tokens']:.0f}, text_out={billing_stats['output_text_tokens']:.0f}, audio_out={billing_stats['output_audio_tokens']:.0f}, duration={duration_ms}ms")
                                 elif event_type == Type.AudioMuted:
                                     # 静音检测事件：通知前端显示"检测到静音"提示
                                     muted_ms = getattr(response, 'muted_duration_ms', 0)
@@ -315,15 +273,8 @@ async def doubao_translator(socketio, sid, lang_from, lang_to, audio_queue, stop
                                                  {'muted_ms': muted_ms},
                                                  to=sid)
                                 else:
-                                    # 记录未处理的事件类型及其详细信息
-                                    logging.info(f"[{event_prefix}][{sid}] 未处理的事件类型: {event_type} (值={event_type})")
-                                    try:
-                                        meta = response.response_meta
-                                        logging.info(f"[{event_prefix}][{sid}] 该事件的 response_meta: {meta}, dir={dir(meta)}")
-                                        if hasattr(meta, 'billing'):
-                                            logging.info(f"[{event_prefix}][{sid}] 该事件的 billing: {meta.billing}")
-                                    except Exception as e:
-                                        logging.info(f"[{event_prefix}][{sid}] 获取 response_meta 失败: {e}")
+                                    # 记录未处理的事件类型
+                                    logging.debug(f"[{event_prefix}][{sid}] 未处理的事件类型: {event_type} (值={int(event_type)})")
 
                             except asyncio.TimeoutError:
                                 continue
@@ -336,12 +287,9 @@ async def doubao_translator(socketio, sid, lang_from, lang_to, audio_queue, stop
                     except Exception as e:
                         logging.error(f"[{event_prefix}][{sid}] Receiver outer error: {e}")
 
-                print(f"[DEBUG][{event_prefix}][{sid}] 准备启动 sender 和 receiver 协程", flush=True)
                 try:
                     await asyncio.gather(sender(), receiver(), return_exceptions=True)
-                    print(f"[DEBUG][{event_prefix}][{sid}] sender 和 receiver 协程已完成", flush=True)
                 except Exception as e:
-                    print(f"[DEBUG][{event_prefix}][{sid}] sender/receiver 异常: {e}", flush=True)
                     logging.error(f"[{event_prefix}][{sid}] sender/receiver 异常: {e}")
                 break
 
