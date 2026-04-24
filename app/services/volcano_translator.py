@@ -249,6 +249,20 @@ async def doubao_translator(socketio, sid, lang_from, lang_to, audio_queue, stop
                                         if billing_collector is not None:
                                             billing_collector[billing_stats['duration_msec']] = billing_stats.copy()
 
+                                        # 立即推送计费更新到前端
+                                        total_tokens = (
+                                            billing_stats['input_audio_tokens'] +
+                                            billing_stats['output_text_tokens'] +
+                                            billing_stats['output_audio_tokens']
+                                        )
+                                        socketio.emit('billing_update', {
+                                            'total_tokens': int(total_tokens),
+                                            'duration_sec': round(billing_stats['duration_msec'] / 1000, 1),
+                                            'input_audio_tokens': int(billing_stats['input_audio_tokens']),
+                                            'output_text_tokens': int(billing_stats['output_text_tokens']),
+                                            'output_audio_tokens': int(billing_stats['output_audio_tokens'])
+                                        }, to=sid)
+
                                         socketio.emit(f'usage_update_{event_prefix}',
                                                      {'duration_ms': duration_ms},
                                                      to=sid)
