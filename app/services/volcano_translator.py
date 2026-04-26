@@ -27,6 +27,15 @@ RETRY_DELAY = 2
 
 async def doubao_translator(socketio, sid, lang_from, lang_to, audio_queue, stop_event, event_prefix, mode, glossary=None, speaker_id=None, transcript_collector=None, billing_collector=None):
 
+    # 辅助函数：发送日志到前端
+    def emit_log(level, message):
+        socketio.emit('log_update', {
+            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'level': level,
+            'channel': event_prefix,
+            'message': message
+        }, to=sid)
+
     if not Config.VOLCANO_APP_KEY or not Config.VOLCANO_ACCESS_KEY:
         error_msg = "火山引擎API密钥未配置"
         logging.error(f"[{event_prefix}][{sid}] {error_msg}")
@@ -73,6 +82,7 @@ async def doubao_translator(socketio, sid, lang_from, lang_to, audio_queue, stop
                 close_timeout=10
             ) as ws:
                 logging.info(f"[{event_prefix}][{sid}] 翻译WebSocket连接成功 (尝试 {attempt + 1}/{MAX_RETRY_ATTEMPTS})")
+                emit_log('INFO', f'WebSocket连接成功 (尝试 {attempt + 1}/{MAX_RETRY_ATTEMPTS})')
 
                 request_payload = {'mode': mode, 'source_language': lang_from, 'target_language': lang_to}
 
@@ -94,6 +104,11 @@ async def doubao_translator(socketio, sid, lang_from, lang_to, audio_queue, stop
                 # 服务端降噪：让火山引擎对输入音频降噪，提升ASR识别准确度
                 start_req.denoise = True
 
+                # DEBUG: 记录请求参数
+                glossary_count = len(glossary) if glossary else 0
+                emit_log('DEBUG', f'StartSession请求: mode={mode}, from={lang_from}, to={lang_to}, glossary={glossary_count}条, speaker={speaker_id or "默认"}')
+                emit_log('DEBUG', f'音频配置: 输入16000Hz/wav, 输出24000Hz/pcm')
+
                 try:
                     await asyncio.wait_for(ws.send(start_req.SerializeToString()), timeout=10)
                 except asyncio.TimeoutError:
@@ -113,6 +128,7 @@ async def doubao_translator(socketio, sid, lang_from, lang_to, audio_queue, stop
 
                     if error_code in ['AUTH_FAILED', 'INVALID_KEY', 'UNAUTHORIZED']:
                         logging.error(f"[{event_prefix}][{sid}] 认证失败: {error_message} (错误码: {error_code})")
+                        emit_log('ERROR', f'认证失败: {error_message} (错误码: {error_code})')
                         socketio.emit('translation_service_status',
                                      {'status': 'error', 'message': f'认证失败: {error_message}', 'channel': event_prefix},
                                      to=sid)
@@ -121,6 +137,7 @@ async def doubao_translator(socketio, sid, lang_from, lang_to, audio_queue, stop
                     raise Exception(f"会话启动失败: {error_message} (错误码: {error_code})")
 
                 logging.info(f"[{event_prefix}][{sid}] 会话成功启动")
+                emit_log('INFO', '翻译会话启动成功')
                 socketio.emit('translation_service_status',
                              {'status': 'connected', 'message': '翻译服务已连接', 'channel': event_prefix},
                              to=sid)
@@ -191,6 +208,7 @@ async def doubao_translator(socketio, sid, lang_from, lang_to, audio_queue, stop
                                     error_msg = getattr(response.response_meta, 'Message', '会话失败')
                                     error_code = getattr(response.response_meta, 'Code', 'UNKNOWN')
                                     logging.error(f"[{event_prefix}][{sid}] 会话失败: {error_msg} (错误码: {error_code})")
+                                    emit_log('ERROR', f'会话失败: {error_msg} (错误码: {error_code})')
                                     socketio.emit('translation_service_status',
                                                  {'status': 'error', 'message': f'会话失败: {error_msg}', 'channel': event_prefix},
                                                  to=sid)
@@ -203,13 +221,15 @@ async def doubao_translator(socketio, sid, lang_from, lang_to, audio_queue, stop
                                     socketio.emit(f'text_update_{event_prefix}',
                                                  {'type': 'original', 'text': response.text, 'isFinal': True},
                                                  to=sid)
-                                    if transcript_collector is not None and response.text:
-                                        transcript_collector.append({
-                                            'channel': event_prefix,
-                                            'type': 'original',
-                                            'text': response.text,
-                                            'timestamp': datetime.now(timezone.utc).isoformat()
-                                        })
+                                    if response.text:
+                                        emit_log('DEBUG', f'识别原文: "{response.text[:30]}{"..." if len(response.text) > 30 else ""}"')
+                                        if transcript_collector is not None:
+                                            transcript_collector.append({
+                                                'channel': event_prefix,
+                                                'type': 'original',
+                                                'text': response.text,
+                                                'timestamp': datetime.now(timezone.utc).isoformat()
+                                            })
                                 elif event_type == Type.TranslationSubtitleResponse:
                                     socketio.emit(f'text_update_{event_prefix}',
                                                  {'type': 'translated', 'text': response.text, 'isFinal': False},
@@ -218,13 +238,15 @@ async def doubao_translator(socketio, sid, lang_from, lang_to, audio_queue, stop
                                     socketio.emit(f'text_update_{event_prefix}',
                                                  {'type': 'translated', 'text': response.text, 'isFinal': True},
                                                  to=sid)
-                                    if transcript_collector is not None and response.text:
-                                        transcript_collector.append({
-                                            'channel': event_prefix,
-                                            'type': 'translated',
-                                            'text': response.text,
-                                            'timestamp': datetime.now(timezone.utc).isoformat()
-                                        })
+                                    if response.text:
+                                        emit_log('DEBUG', f'翻译结果: "{response.text[:30]}{"..." if len(response.text) > 30 else ""}"')
+                                        if transcript_collector is not None:
+                                            transcript_collector.append({
+                                                'channel': event_prefix,
+                                                'type': 'translated',
+                                                'text': response.text,
+                                                'timestamp': datetime.now(timezone.utc).isoformat()
+                                            })
                                 elif event_type == Type.TTSResponse and response.data:
                                     socketio.emit(f'audio_data_{event_prefix}', response.data, to=sid)
                                 elif event_type == Type.TTSSentenceEnd:
@@ -266,6 +288,7 @@ async def doubao_translator(socketio, sid, lang_from, lang_to, audio_queue, stop
                                         socketio.emit(f'usage_update_{event_prefix}',
                                                      {'duration_ms': duration_ms},
                                                      to=sid)
+                                        emit_log('DEBUG', f'计费更新: +{int(total_tokens)} tokens (音频输入:{int(billing_stats["input_audio_tokens"])}, 文本输出:{int(billing_stats["output_text_tokens"])}, 音频输出:{int(billing_stats["output_audio_tokens"])}), 时长:{round(billing_stats["duration_msec"]/1000,1)}s')
                                 elif event_type == Type.AudioMuted:
                                     # 静音检测事件：通知前端显示"检测到静音"提示
                                     muted_ms = getattr(response, 'muted_duration_ms', 0)
@@ -298,11 +321,13 @@ async def doubao_translator(socketio, sid, lang_from, lang_to, audio_queue, stop
             logging.warning(f"[{event_prefix}][{sid}] {last_error} (尝试 {attempt + 1}/{MAX_RETRY_ATTEMPTS})")
 
             if attempt < MAX_RETRY_ATTEMPTS - 1:
+                emit_log('WARNING', f'连接失败，正在重试 ({attempt + 1}/{MAX_RETRY_ATTEMPTS})...')
                 socketio.emit('translation_service_status',
                              {'status': 'connecting', 'message': f'连接失败，正在重试 ({attempt + 1}/{MAX_RETRY_ATTEMPTS})...', 'channel': event_prefix},
                              to=sid)
                 await asyncio.sleep(RETRY_DELAY * (attempt + 1))
             else:
+                emit_log('ERROR', f'连接失败，已重试{MAX_RETRY_ATTEMPTS}次')
                 socketio.emit('translation_service_status',
                              {'status': 'error', 'message': f'连接失败，已重试{MAX_RETRY_ATTEMPTS}次', 'channel': event_prefix},
                              to=sid)
@@ -312,11 +337,13 @@ async def doubao_translator(socketio, sid, lang_from, lang_to, audio_queue, stop
             logging.warning(f"[{event_prefix}][{sid}] {last_error} (尝试 {attempt + 1}/{MAX_RETRY_ATTEMPTS})")
 
             if attempt < MAX_RETRY_ATTEMPTS - 1:
+                emit_log('WARNING', f'连接超时，正在重试 ({attempt + 1}/{MAX_RETRY_ATTEMPTS})...')
                 socketio.emit('translation_service_status',
                              {'status': 'connecting', 'message': f'连接超时，正在重试 ({attempt + 1}/{MAX_RETRY_ATTEMPTS})...', 'channel': event_prefix},
                              to=sid)
                 await asyncio.sleep(RETRY_DELAY * (attempt + 1))
             else:
+                emit_log('ERROR', '连接超时，请检查网络连接')
                 socketio.emit('translation_service_status',
                              {'status': 'error', 'message': '连接超时，请检查网络连接', 'channel': event_prefix},
                              to=sid)
@@ -325,13 +352,16 @@ async def doubao_translator(socketio, sid, lang_from, lang_to, audio_queue, stop
             last_error = f"翻译服务异常: {str(e)}"
             error_type = type(e).__name__
             logging.error(f"[{event_prefix}][{sid}] {last_error} (类型: {error_type})")
+            emit_log('ERROR', f'翻译服务异常: {str(e)}')
 
             if error_type in ['ConnectionError', 'OSError', 'TimeoutError'] and attempt < MAX_RETRY_ATTEMPTS - 1:
+                emit_log('WARNING', f'连接异常，正在重试 ({attempt + 1}/{MAX_RETRY_ATTEMPTS})...')
                 socketio.emit('translation_service_status',
                              {'status': 'connecting', 'message': f'连接异常，正在重试 ({attempt + 1}/{MAX_RETRY_ATTEMPTS})...', 'channel': event_prefix},
                              to=sid)
                 await asyncio.sleep(RETRY_DELAY * (attempt + 1))
             else:
+                emit_log('ERROR', f'连接AI服务失败: {str(e)}')
                 socketio.emit('translation_service_status',
                              {'status': 'error', 'message': f'连接AI服务失败: {str(e)}', 'channel': event_prefix},
                              to=sid)
@@ -340,5 +370,6 @@ async def doubao_translator(socketio, sid, lang_from, lang_to, audio_queue, stop
     if last_error and attempt == MAX_RETRY_ATTEMPTS - 1:
         logging.error(f"[{event_prefix}][{sid}] 翻译服务连接失败，已重试{MAX_RETRY_ATTEMPTS}次。最后错误: {last_error}")
 
+    emit_log('INFO', '翻译任务结束')
     logging.info(f"[{event_prefix}][{sid}] 翻译任务结束")
     stop_event.set()

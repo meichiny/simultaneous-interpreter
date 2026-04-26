@@ -142,7 +142,100 @@
         /* =========================================
            4. 悬浮窗 / Action Mode
            ========================================= */
-        #section-action { display: none; height: 100%; flex-direction: column; position: relative; }
+        #section-action { display: none; height: 100%; flex-direction: row; position: relative; }
+
+        /* 日志侧边栏 */
+        .log-sidebar {
+            width: 300px;
+            background: var(--bg-card);
+            border-left: 1px solid var(--border);
+            display: none; /* 默认隐藏 */
+            flex-direction: column;
+        }
+        .log-sidebar.visible {
+            display: flex;
+        }
+        .log-toggle-btn {
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-right: none;
+            color: var(--text-sub);
+            padding: 8px 4px;
+            border-radius: 4px 0 0 4px;
+            font-size: 12px;
+            cursor: pointer;
+            z-index: 100;
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            letter-spacing: 2px;
+        }
+        .log-toggle-btn:hover {
+            background: var(--accent);
+            color: white;
+        }
+        .log-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
+            border-bottom: 1px solid var(--border);
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .log-btn {
+            background: rgba(255,255,255,0.1);
+            border: none;
+            color: var(--text-sub);
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .log-btn:hover {
+            background: var(--accent);
+            color: white;
+        }
+        .log-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+            font-size: 11px;
+            font-family: "Consolas", "Monaco", monospace;
+        }
+        .log-item {
+            margin-bottom: 6px;
+            line-height: 1.4;
+            word-break: break-word;
+        }
+        .log-time {
+            color: #666;
+            margin-right: 6px;
+        }
+        .log-level-info { color: #10b981; }
+        .log-level-warning { color: #f59e0b; }
+        .log-level-error { color: #ef4444; }
+        .log-level-debug { color: #888; }
+        .log-channel {
+            color: var(--accent);
+            margin-right: 4px;
+        }
+        .log-message {
+            color: var(--text-main);
+        }
+
+        /* 主内容区容器 */
+        .action-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            min-width: 0;
+        }
         
         .action-bar { 
             height: 28px; background: rgba(0,0,0,0.8); 
@@ -493,36 +586,55 @@
     </div>
 
     <div id="section-action">
-        <div class="action-bar">
-            <div class="action-info">
-                <div class="act-item"><div id="act-status-dot" class="status-dot"></div><span id="act-status-text">就绪 / Ready</span></div>
-                <div class="act-item" style="border-left:1px solid #444; padding-left:10px;"><span id="act-latency">-- ms</span></div>
-                <div class="act-item" style="border-left:1px solid #444; padding-left:10px;"><span id="act-billing">-- tokens</span></div>
+        <div class="action-main">
+            <div class="action-bar">
+                <div class="action-info">
+                    <div class="act-item"><div id="act-status-dot" class="status-dot"></div><span id="act-status-text">就绪 / Ready</span></div>
+                    <div class="act-item" style="border-left:1px solid #444; padding-left:10px;"><span id="act-latency">-- ms</span></div>
+                    <div class="act-item" style="border-left:1px solid #444; padding-left:10px;"><span id="act-billing">-- tokens</span></div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <button class="btn-nav" onclick="openDisplayWindow()" style="font-size: 10px; padding: 2px 8px;">📺 打开显示窗口</button>
+                    <button class="btn-nav" onclick="toggleTextSettings()" style="font-size: 10px; padding: 2px 8px;">🎨 字体设置</button>
+                    <div class="action-close-btn" onclick="stopSession()" title="退出">✕</div>
+                </div>
             </div>
-            <div style="display: flex; align-items: center; gap: 8px;">
-                <button class="btn-nav" onclick="openDisplayWindow()" style="font-size: 10px; padding: 2px 8px;">📺 打开显示窗口</button>
-                <button class="btn-nav" onclick="toggleTextSettings()" style="font-size: 10px; padding: 2px 8px;">🎨 字体设置</button>
-                <div class="action-close-btn" onclick="stopSession()" title="退出">✕</div>
+
+            <div class="action-body">
+                <div class="action-box" id="ab-speak">
+                    <div class="ab-header"><span>我的发言 / ME</span><span class="ab-tag">正在听 / LISTENING</span></div>
+                    <div class="split-container">
+                        <div class="pane-trans" id="pane-trans-speak"><span class="pending-text" id="pending-trans-speak">...</span></div>
+                        <div class="pane-divider"></div>
+                        <div class="pane-orig" id="pane-orig-speak"><span class="pending-text" id="pending-orig-speak" style="font-size:11px;">Ready</span></div>
+                    </div>
+                </div>
+
+                <div class="action-box" id="ab-listen">
+                    <div class="ab-header"><span>他人发言 / OTHERS</span><span class="ab-tag">正在读 / PLAYING</span></div>
+                    <div class="split-container">
+                        <div class="pane-trans" id="pane-trans-listen"><span class="pending-text" id="pending-trans-listen">...</span></div>
+                        <div class="pane-divider"></div>
+                        <div class="pane-orig" id="pane-orig-listen"><span class="pending-text" id="pending-orig-listen" style="font-size:11px;">Ready</span></div>
+                    </div>
+                </div>
             </div>
         </div>
-        
-        <div class="action-body">
-            <div class="action-box" id="ab-speak">
-                <div class="ab-header"><span>我的发言 / ME</span><span class="ab-tag">正在听 / LISTENING</span></div>
-                <div class="split-container">
-                    <div class="pane-trans" id="pane-trans-speak"><span class="pending-text" id="pending-trans-speak">...</span></div>
-                    <div class="pane-divider"></div>
-                    <div class="pane-orig" id="pane-orig-speak"><span class="pending-text" id="pending-orig-speak" style="font-size:11px;">Ready</span></div>
+
+        <!-- 日志侧边栏切换按钮 -->
+        <button class="log-toggle-btn" id="log-toggle-btn" onclick="toggleLogSidebar()">展开日志</button>
+
+        <!-- 日志侧边栏 -->
+        <div class="log-sidebar" id="log-sidebar">
+            <div class="log-header">
+                <span>运行日志 / Logs</span>
+                <div style="display: flex; gap: 8px;">
+                    <button class="log-btn" onclick="toggleLogSidebar()" title="收起">✕</button>
+                    <button class="log-btn" onclick="openFullLogs()">📋 完整日志</button>
                 </div>
             </div>
-            
-            <div class="action-box" id="ab-listen">
-                <div class="ab-header"><span>他人发言 / OTHERS</span><span class="ab-tag">正在读 / PLAYING</span></div>
-                <div class="split-container">
-                    <div class="pane-trans" id="pane-trans-listen"><span class="pending-text" id="pending-trans-listen">...</span></div>
-                    <div class="pane-divider"></div>
-                    <div class="pane-orig" id="pane-orig-listen"><span class="pending-text" id="pending-orig-listen" style="font-size:11px;">Ready</span></div>
-                </div>
+            <div class="log-content" id="log-content">
+                <div class="log-item" style="color:#666;">等待会话开始...</div>
             </div>
         </div>
     </div>

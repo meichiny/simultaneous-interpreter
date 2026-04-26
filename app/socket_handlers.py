@@ -159,6 +159,12 @@ def register_socket_handlers(socketio, app):
             sessions[sid] = session_data
 
         app.logger.info(f"Session {sid} started")
+        socketio.emit('log_update', {
+            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'level': 'INFO',
+            'channel': 'system',
+            'message': '会话已启动'
+        }, to=sid)
         socketio.start_background_task(target=session_manager_task, sid=sid, loop=loop, app=app, socketio=socketio)
 
     @socketio.on('stop_session')
@@ -168,6 +174,12 @@ def register_socket_handlers(socketio, app):
             if sid in sessions:
                 sessions[sid]['stop_event'].set()
         app.logger.info(f"Stop requested: {sid}")
+        socketio.emit('log_update', {
+            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'level': 'INFO',
+            'channel': 'system',
+            'message': '停止请求已接收'
+        }, to=sid)
 
     @socketio.on('audio_chunk_speak')
     def handle_audio_chunk_speak(chunk):
@@ -226,6 +238,21 @@ def session_manager_task(sid, loop, app, socketio):
                 billing_stats = session_data.get('billing_stats', {})
 
                 app.logger.info(f"[Socket][{sid}] run_tasks 开始, speak_config={speak_config}, listen_config={listen_config}")
+
+                # DEBUG: 记录详细配置
+                socketio.emit('log_update', {
+                    'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                    'level': 'DEBUG',
+                    'channel': 'system',
+                    'message': f'speak配置: mode={speak_config.get("mode")}, direction={speak_config.get("direction")}, device={speak_config.get("deviceId", "未指定")[:8]}...'
+                }, to=sid)
+                if listen_config:
+                    socketio.emit('log_update', {
+                        'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                        'level': 'DEBUG',
+                        'channel': 'system',
+                        'message': f'listen配置: mode={listen_config.get("mode")}, direction={listen_config.get("direction")}, device={listen_config.get("deviceId", "未指定")[:8]}...'
+                    }, to=sid)
 
                 if speak_config.get('mode') == 'translate':
                     lang_from, lang_to = speak_config.get('direction', 'zh-en').split('-')
@@ -365,3 +392,9 @@ def session_manager_task(sid, loop, app, socketio):
 
         socketio.emit('session_stopped', to=sid)
         app.logger.info(f"Session {sid} stopped completely")
+        socketio.emit('log_update', {
+            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'level': 'INFO',
+            'channel': 'system',
+            'message': '会话已完全停止'
+        }, to=sid)

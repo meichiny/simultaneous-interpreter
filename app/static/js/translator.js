@@ -18,6 +18,11 @@
     let activeStreams = [];
     let ttsConfig = { speak: true, listen: true };
 
+    // 日志存储
+    let sessionLogs = [];
+    const MAX_SIDEBAR_LOGS = 50;
+    let logWindow = null; // 完整日志窗口引用
+
     // --- 显示窗口和设置 ---
     let displayWindow = null;
     let textSettings = {
@@ -184,6 +189,136 @@
             console.log('[Billing] UI 已更新:', el.innerText);
         } else {
             console.warn('[Billing] 未找到 act-billing 元素');
+        }
+    }
+
+    // --- 日志功能 ---
+    function addLog(logData) {
+        // 存储到数组
+        sessionLogs.push(logData);
+
+        // 渲染到侧边栏
+        renderSidebarLogs();
+
+        // 通知完整日志窗口
+        if (logWindow && !logWindow.closed) {
+            try {
+                logWindow.postMessage({
+                    type: 'newLog',
+                    log: logData
+                }, '*');
+            } catch (e) {
+                // 忽略跨域错误
+            }
+        }
+    }
+
+    // 侧边栏显示的日志级别（默认不显示 DEBUG，避免太多）
+    const SIDEBAR_LOG_LEVELS = ['INFO', 'WARNING', 'ERROR'];
+
+    function renderSidebarLogs() {
+        const container = document.getElementById('log-content');
+        if (!container) return;
+
+        // 过滤级别，只显示指定级别
+        const filteredLogs = sessionLogs.filter(log => SIDEBAR_LOG_LEVELS.includes(log.level));
+
+        // 只显示最近的 MAX_SIDEBAR_LOGS 条
+        const recentLogs = filteredLogs.slice(-MAX_SIDEBAR_LOGS);
+
+        // 生成 HTML
+        const html = recentLogs.map(log => {
+            const levelClass = `log-level-${log.level.toLowerCase()}`;
+            return `<div class="log-item">
+                <span class="log-time">${log.timestamp}</span>
+                <span class="${levelClass}">[${log.level}]</span>
+                <span class="log-channel">${log.channel}:</span>
+                <span class="log-message">${escapeHtml(log.message)}</span>
+            </div>`;
+        }).join('');
+
+        container.innerHTML = html || '<div class="log-item" style="color:#666;">等待会话开始...</div>';
+
+        // 自动滚动到底部
+        container.scrollTop = container.scrollHeight;
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function openFullLogs() {
+        // 如果窗口已存在且未关闭，则聚焦
+        if (logWindow && !logWindow.closed) {
+            logWindow.focus();
+            // 发送当前日志
+            logWindow.postMessage({
+                type: 'initLogs',
+                logs: sessionLogs
+            }, '*');
+            return;
+        }
+
+        // 打开新窗口查看完整日志
+        logWindow = window.open('/logs', 'fullLogs', 'width=900,height=700,scrollbars=yes');
+        if (logWindow) {
+            // 等待新窗口加载完成后发送日志
+            const sendLogs = () => {
+                try {
+                    logWindow.postMessage({
+                        type: 'initLogs',
+                        logs: sessionLogs
+                    }, '*');
+                } catch (e) {
+                    console.error('发送日志到新窗口失败:', e);
+                }
+            };
+            // 延迟发送确保窗口已加载
+            setTimeout(sendLogs, 500);
+        }
+    }
+
+    // 暴露到全局
+    window.openFullLogs = openFullLogs;
+
+    // 日志侧边栏展开/收起
+    window.toggleLogSidebar = function() {
+        const sidebar = document.getElementById('log-sidebar');
+        const toggleBtn = document.getElementById('log-toggle-btn');
+        if (!sidebar || !toggleBtn) return;
+
+        const isVisible = sidebar.classList.contains('visible');
+        if (isVisible) {
+            sidebar.classList.remove('visible');
+            toggleBtn.style.display = 'block';
+        } else {
+            sidebar.classList.add('visible');
+            toggleBtn.style.display = 'none';
+            // 重新渲染确保显示最新日志
+            renderSidebarLogs();
+        }
+    };
+
+    // 清理日志（会话停止时调用）
+    function clearLogs() {
+        sessionLogs = [];
+        renderSidebarLogs();
+        const container = document.getElementById('log-content');
+        if (container) {
+            container.innerHTML = '<div class="log-item" style="color:#666;">等待会话开始...</div>';
+        }
+
+        // 通知完整日志窗口
+        if (logWindow && !logWindow.closed) {
+            try {
+                logWindow.postMessage({
+                    type: 'clearLogs'
+                }, '*');
+            } catch (e) {
+                // 忽略跨域错误
+            }
         }
     }
 
@@ -750,6 +885,9 @@
 
         // 隐藏运行中状态（新窗口模式）
         showRunningState(false);
+
+        // 清理日志
+        clearLogs();
     };
 
     // --- 音频流 + VAD 接入 SocketHandler ---
@@ -1000,6 +1138,7 @@
         socket.on('text_update_speak', d => updateText('speak', d));
         socket.on('text_update_listen', d => updateText('listen', d));
         socket.on('billing_update', d => updateBillingUI(d));
+        socket.on('log_update', d => addLog(d));
 
         setInterval(() => { if (socket.connected) socket.emit('ping_from_client', { t: Date.now() }); }, 2000);
         if (socket.connected) updateStatus('connected', '服务已连接 / Service Connected');
