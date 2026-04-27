@@ -373,7 +373,6 @@
             <div class="header-center">
                 <a href="/glossary"><button class="btn-nav">术语管理 / Glossary Mgr</button></a>
                 <a href="/meetings"><button class="btn-nav">会议记录 / Meetings</button></a>
-                <button class="btn-nav" onclick="openDisplayWindow()">📺 显示窗口 / Display</button>
                 <button class="btn-nav" onclick="resetGuide()" style="opacity:0.5; margin-left:10px;">⚠ 重置 / Reset Guide</button>
             </div>
         </div>
@@ -499,21 +498,6 @@
                 </div>
                 <div style="font-size:9px; color:#666; margin-top:3px; text-align:center;">校准请保持安静 / Please keep silent during calibration</div>
 
-                <!-- 运行模式 -->
-                <div class="run-mode-block" style="margin-top:15px; padding-top:15px; border-top:1px solid #333;">
-                    <div class="col-title" style="font-size:12px; margin-bottom:10px;">运行模式 / Run Mode</div>
-                    <div class="form-group" style="display:flex; gap:15px; align-items:center;">
-                        <label style="display:flex; align-items:center; gap:5px; cursor:pointer; font-size:12px;">
-                            <input type="radio" name="run-mode" value="embedded" checked onchange="onRunModeChange()">
-                            <span>内嵌运行 / In Page</span>
-                        </label>
-                        <label style="display:flex; align-items:center; gap:5px; cursor:pointer; font-size:12px;">
-                            <input type="radio" name="run-mode" value="window" onchange="onRunModeChange()">
-                            <span>新窗口运行 / New Window</span>
-                        </label>
-                    </div>
-                </div>
-
                 <!-- 显示设置 -->
                 <div class="display-settings-block" style="margin-top:15px; padding-top:15px; border-top:1px solid #333;">
                     <div class="col-title" style="font-size:12px; margin-bottom:10px;">显示设置 / Display</div>
@@ -594,7 +578,7 @@
                     <div class="act-item" style="border-left:1px solid #444; padding-left:10px;"><span id="act-billing">-- tokens</span></div>
                 </div>
                 <div style="display: flex; align-items: center; gap: 8px;">
-                    <button class="btn-nav" onclick="openDisplayWindow()" style="font-size: 10px; padding: 2px 8px;">📺 打开显示窗口</button>
+                    <button class="btn-nav" onclick="openDisplayWindow()" style="font-size: 10px; padding: 2px 8px;">📺 打开投影屏</button>
                     <button class="btn-nav" onclick="toggleTextSettings()" style="font-size: 10px; padding: 2px 8px;">🎨 字体设置</button>
                     <div class="action-close-btn" onclick="stopSession()" title="退出">✕</div>
                 </div>
@@ -652,6 +636,11 @@
         </div>
 
         <div style="margin-bottom:15px;">
+            <label style="display:block; font-size:11px; color:#888; margin-bottom:8px;">行高 / Line Height: <span id="setting-lh-value">1.5</span></label>
+            <input type="range" id="setting-line-height" min="1" max="3" step="0.1" value="1.5" style="width:100%;" oninput="updateSetting('lineHeight', this.value)">
+        </div>
+
+        <div style="margin-bottom:15px;">
             <label style="display:block; font-size:11px; color:#888; margin-bottom:8px;">译文颜色 / Trans Color</label>
             <input type="color" id="setting-trans-color" value="#ffffff" style="width:100%; height:35px; border:none; border-radius:4px; cursor:pointer;" oninput="updateSetting('transColor', this.value)">
         </div>
@@ -664,6 +653,11 @@
         <div style="margin-bottom:15px;">
             <label style="display:block; font-size:11px; color:#888; margin-bottom:8px;">背景颜色 / Background</label>
             <input type="color" id="setting-bg-color" value="#000000" style="width:100%; height:35px; border:none; border-radius:4px; cursor:pointer;" oninput="updateSetting('bgColor', this.value)">
+        </div>
+
+        <div style="margin-bottom:15px;">
+            <label style="display:block; font-size:11px; color:#888; margin-bottom:8px;">背景透明度 / Opacity: <span id="setting-opacity-value">100</span>%</label>
+            <input type="range" id="setting-bg-opacity" min="0" max="100" value="100" style="width:100%;" oninput="updateSetting('bgOpacity', this.value)">
         </div>
 
         <button onclick="toggleTextSettings()" style="width:100%; padding:10px; background:var(--accent); border:none; border-radius:6px; color:#fff; font-size:13px; cursor:pointer;">完成 / Done</button>

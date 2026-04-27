@@ -32,12 +32,13 @@ def register_socket_handlers(socketio, app):
         app.logger.info(f'Client Disconnected: {sid}')
         with sessions_lock:
             if sid in sessions:
+                # 设置停止事件，让 session_manager_task 处理清理和保存
                 sessions[sid]['stop_event'].set()
                 loop = sessions[sid].get('loop')
                 if loop and loop.is_running():
                     loop.call_soon_threadsafe(loop.stop)
-                del sessions[sid]
-                app.logger.info(f'Session {sid} cleaned up.')
+                # 不要在这里删除 session，让 session_manager_task 的 finally 块来处理
+                app.logger.info(f'Session {sid} stop requested on disconnect.')
 
     @socketio.on('update_glossary')
     def handle_update_glossary(data):
