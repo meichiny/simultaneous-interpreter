@@ -241,27 +241,31 @@ def session_manager_task(sid, loop, app, socketio):
                 app.logger.info(f"[Socket][{sid}] run_tasks 开始, speak_config={speak_config}, listen_config={listen_config}")
 
                 # DEBUG: 记录详细配置
+                speak_api_mode = 's2s' if speak_config.get('enable_tts', True) else 's2t'
                 socketio.emit('log_update', {
                     'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                     'level': 'DEBUG',
                     'channel': 'system',
-                    'message': f'speak配置: mode={speak_config.get("mode")}, direction={speak_config.get("direction")}, device={speak_config.get("deviceId", "未指定")[:8]}...'
+                    'message': f'speak配置: api_mode={speak_api_mode}, direction={speak_config.get("direction")}, enable_tts={speak_config.get("enable_tts", True)}'
                 }, to=sid)
                 if listen_config:
+                    listen_api_mode = 's2s' if listen_config.get('enable_tts', True) else 's2t'
                     socketio.emit('log_update', {
                         'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                         'level': 'DEBUG',
                         'channel': 'system',
-                        'message': f'listen配置: mode={listen_config.get("mode")}, direction={listen_config.get("direction")}, device={listen_config.get("deviceId", "未指定")[:8]}...'
+                        'message': f'listen配置: api_mode={listen_api_mode}, direction={listen_config.get("direction")}, enable_tts={listen_config.get("enable_tts", True)}'
                     }, to=sid)
 
                 if speak_config.get('mode') == 'translate':
                     lang_from, lang_to = speak_config.get('direction', 'zh-en').split('-')
                     app.logger.info(f"[Socket][{sid}] 启动 speak 通道翻译任务")
+                    # 根据 enable_tts 选择 mode: s2s(有语音) 或 s2t(无语音)
+                    speak_mode = 's2s' if speak_config.get('enable_tts', True) else 's2t'
                     tasks.append(doubao_translator(
                         socketio, sid, lang_from, lang_to,
                         session_data['speak_queue'], current_translator_stop_event,
-                        'speak', 's2s', glossary=speak_config.get('glossary'),
+                        'speak', speak_mode, glossary=speak_config.get('glossary'),
                         speaker_id=speak_config.get('speaker_id', ''),
                         transcript_collector=transcript,
                         billing_collector=billing_stats
@@ -269,10 +273,12 @@ def session_manager_task(sid, loop, app, socketio):
 
                 if listen_config and listen_config.get('mode') == 'translate':
                     lang_from, lang_to = listen_config.get('direction', 'en-zh').split('-')
+                    # 根据 enable_tts 选择 mode
+                    listen_mode = 's2s' if listen_config.get('enable_tts', True) else 's2t'
                     tasks.append(doubao_translator(
                         socketio, sid, lang_from, lang_to,
                         session_data['listen_queue'], current_translator_stop_event,
-                        'listen', 's2s', glossary=listen_config.get('glossary'),
+                        'listen', listen_mode, glossary=listen_config.get('glossary'),
                         speaker_id=listen_config.get('speaker_id', ''),
                         transcript_collector=transcript,
                         billing_collector=billing_stats

@@ -744,8 +744,8 @@
             const catIds = Array.from(document.querySelectorAll('.glossary-item input:checked')).map(c => parseInt(c.value));
             const voiceSpeak = document.getElementById('voice-speak');
             const voiceListen = document.getElementById('voice-listen');
-            const speakCfg = { mode: 'translate', direction: apiDirSpeak, deviceId: deviceIds.mic, category_ids: catIds, speaker_id: voiceSpeak ? voiceSpeak.value : '' };
-            const listenCfg = hasCableB ? { mode: 'translate', direction: apiDirListen, deviceId: virtualCables.cableB_Output_Id, category_ids: [], speaker_id: voiceListen ? voiceListen.value : '' } : null;
+            const speakCfg = { mode: 'translate', direction: apiDirSpeak, deviceId: deviceIds.mic, category_ids: catIds, speaker_id: voiceSpeak ? voiceSpeak.value : '', enable_tts: ttsConfig.speak };
+            const listenCfg = hasCableB ? { mode: 'translate', direction: apiDirListen, deviceId: virtualCables.cableB_Output_Id, category_ids: [], speaker_id: voiceListen ? voiceListen.value : '', enable_tts: ttsConfig.listen } : null;
             lastSessionPayload = { speak_config: speakCfg, listen_config: listenCfg };
             socket.emit('start_session', lastSessionPayload);
             isRunning = true;

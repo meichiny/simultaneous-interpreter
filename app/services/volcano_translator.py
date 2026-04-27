@@ -92,14 +92,19 @@ async def doubao_translator(socketio, sid, lang_from, lang_to, audio_queue, stop
                 if glossary:
                     request_payload['corpus'] = {'glossary_list': glossary}
 
-                start_req = TranslateRequest(
-                    event=Type.StartSession,
-                    request_meta={'SessionID': session_id},
-                    user={'uid': "web_client"},
-                    source_audio={'format': 'wav', 'codec': 'raw', 'rate': 16000, 'bits': 16, 'channel': 1},
-                    # PCM原始格式（float32）：无编码延迟，前端可逐帧流式播放
-                    target_audio={'format': 'pcm', 'rate': 24000},
-                    request=request_payload)
+                # 构建请求：s2s 模式需要 target_audio，s2t 模式不需要
+                request_kwargs = {
+                    'event': Type.StartSession,
+                    'request_meta': {'SessionID': session_id},
+                    'user': {'uid': "web_client"},
+                    'source_audio': {'format': 'wav', 'codec': 'raw', 'rate': 16000, 'bits': 16, 'channel': 1},
+                    'request': request_payload
+                }
+                # s2s 模式需要配置 target_audio
+                if mode == 's2s':
+                    request_kwargs['target_audio'] = {'format': 'pcm', 'rate': 24000}
+
+                start_req = TranslateRequest(**request_kwargs)
 
                 # 服务端降噪：让火山引擎对输入音频降噪，提升ASR识别准确度
                 start_req.denoise = True
@@ -107,7 +112,10 @@ async def doubao_translator(socketio, sid, lang_from, lang_to, audio_queue, stop
                 # DEBUG: 记录请求参数
                 glossary_count = len(glossary) if glossary else 0
                 emit_log('DEBUG', f'StartSession请求: mode={mode}, from={lang_from}, to={lang_to}, glossary={glossary_count}条, speaker={speaker_id or "默认"}')
-                emit_log('DEBUG', f'音频配置: 输入16000Hz/wav, 输出24000Hz/pcm')
+                if mode == 's2s':
+                    emit_log('DEBUG', f'音频配置: 输入16000Hz/wav, 输出24000Hz/pcm')
+                else:
+                    emit_log('DEBUG', f'音频配置: 输入16000Hz/wav, 无语音输出(s2t)')
 
                 try:
                     await asyncio.wait_for(ws.send(start_req.SerializeToString()), timeout=10)
