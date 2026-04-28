@@ -152,7 +152,8 @@
         document.getElementById('guide-modal').style.display = 'none';
         if (step === 1) document.getElementById('card-lang').classList.add('spotlight-active');
         if (step === 2) document.getElementById('card-audio').classList.add('spotlight-active');
-        if (step === 3) document.getElementById('card-glossary').classList.add('spotlight-active');
+        if (step === 3) document.getElementById('card-display').classList.add('spotlight-active');
+        if (step === 4) document.getElementById('card-glossary').classList.add('spotlight-active');
     };
 
     window.finishGuide = function() {
