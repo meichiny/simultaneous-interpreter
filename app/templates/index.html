@@ -62,8 +62,26 @@
            2. 仪表盘
            ========================================= */
         #section-dashboard { display: flex; flex-direction: column; height: 100%; width: 100%; }
-        .main-body { display: flex; flex: 1; gap: 15px; overflow: hidden; padding: 20px; }
-        .col-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 15px; flex: 1; display: flex; flex-direction: column; }
+        .main-body { display: flex; flex: 1; gap: 15px; overflow: hidden; padding: 20px; flex-wrap: wrap; }
+
+        /* 四列布局：语言/音频/显示/术语 - 比例 25/20/30/25 */
+        .col-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 15px; display: flex; flex-direction: column; }
+        #card-lang { flex: 0 0 calc(25% - 11px); min-width: 200px; }
+        #card-audio { flex: 0 0 calc(20% - 12px); min-width: 180px; }
+        #card-display { flex: 0 0 calc(30% - 11px); min-width: 260px; }
+        #card-glossary { flex: 0 0 calc(25% - 12px); min-width: 200px; }
+
+        /* 响应式断点 */
+        @media (max-width: 1439px) {
+            /* 1280-1439px：两排布局 */
+            #card-lang, #card-audio { flex: 0 0 calc(50% - 8px); }
+            #card-display, #card-glossary { flex: 0 0 calc(50% - 8px); }
+        }
+        @media (max-width: 1279px) {
+            /* <1280px：单列堆叠 */
+            .main-body { overflow-y: auto; }
+            #card-lang, #card-audio, #card-display, #card-glossary { flex: 0 0 100%; height: auto; min-height: 300px; }
+        }
         .col-title { font-size: 13px; font-weight: 600; margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
         
         .step-badge { background: var(--bg-input); color: #888; font-size: 9px; padding: 1px 5px; border-radius: 3px; border: 1px solid #333; }
@@ -499,45 +517,6 @@
                 <div style="font-size:9px; color:#666; margin-top:3px; text-align:center;">校准请保持安静 / Please keep silent during calibration</div>
 
                 <!-- 显示设置 -->
-                <div class="display-settings-block" style="margin-top:15px; padding-top:15px; border-top:1px solid #333;">
-                    <div class="col-title" style="font-size:12px; margin-bottom:10px;">显示设置 / Display</div>
-
-                    <div class="form-group">
-                        <label class="form-label">字号 / Font Size: <span id="display-size-value">13</span>px</label>
-                        <input type="range" id="display-font-size" min="10" max="32" value="13" style="width:100%;" oninput="updateDisplaySetting('fontSize', this.value)">
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">行高 / Line Height: <span id="display-lh-value">1.5</span></label>
-                        <input type="range" id="display-line-height" min="1" max="3" step="0.1" value="1.5" style="width:100%;" oninput="updateDisplaySetting('lineHeight', this.value)">
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">译文颜色 / Trans Color</label>
-                        <input type="color" id="display-trans-color" value="#ffffff" style="width:100%; height:30px; border:none; border-radius:4px; cursor:pointer;" oninput="updateDisplaySetting('transColor', this.value)">
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">原文颜色 / Orig Color</label>
-                        <input type="color" id="display-orig-color" value="#b3b3b3" style="width:100%; height:30px; border:none; border-radius:4px; cursor:pointer;" oninput="updateDisplaySetting('origColor', this.value)">
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">背景颜色 / Background</label>
-                        <input type="color" id="display-bg-color" value="#000000" style="width:100%; height:30px; border:none; border-radius:4px; cursor:pointer;" oninput="updateDisplaySetting('bgColor', this.value)">
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">背景透明度 / Opacity: <span id="display-opacity-value">100</span>%</label>
-                        <input type="range" id="display-bg-opacity" min="0" max="100" value="100" style="width:100%;" oninput="updateDisplaySetting('bgOpacity', this.value)">
-                    </div>
-
-                    <div style="display:flex; gap:8px; margin-top:10px;">
-                        <button class="btn-nav" onclick="resetDisplaySettings()" style="flex:1; font-size:10px;">重置默认 / Reset</button>
-                        <button class="btn-nav" onclick="previewDisplaySettings()" style="flex:1; font-size:10px;">预览 / Preview</button>
-                    </div>
-                </div>
-
                 <button class="step-next-btn" onclick="nextGuide(3)">下一步</button>
                 <div class="internal-status-box" id="routing-check-box">
                     <div class="isb-title">内部路由检测 / Routing Check</div>
@@ -546,8 +525,48 @@
                 </div>
             </div>
 
+            <div id="card-display" class="col-card">
+                <div class="col-title">3. 显示设置 / Display <span class="step-badge">可选</span></div>
+
+                <div class="form-group">
+                    <label class="form-label">字号 / Font Size: <span id="display-size-value">13</span>px</label>
+                    <input type="range" id="display-font-size" min="10" max="32" value="13" style="width:100%;" oninput="updateDisplaySetting('fontSize', this.value)">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">行高 / Line Height: <span id="display-lh-value">1.5</span></label>
+                    <input type="range" id="display-line-height" min="1" max="3" step="0.1" value="1.5" style="width:100%;" oninput="updateDisplaySetting('lineHeight', this.value)">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">译文颜色 / Trans Color</label>
+                    <input type="color" id="display-trans-color" value="#ffffff" style="width:100%; height:30px; border:none; border-radius:4px; cursor:pointer;" oninput="updateDisplaySetting('transColor', this.value)">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">原文颜色 / Orig Color</label>
+                    <input type="color" id="display-orig-color" value="#b3b3b3" style="width:100%; height:30px; border:none; border-radius:4px; cursor:pointer;" oninput="updateDisplaySetting('origColor', this.value)">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">背景颜色 / Background</label>
+                    <input type="color" id="display-bg-color" value="#000000" style="width:100%; height:30px; border:none; border-radius:4px; cursor:pointer;" oninput="updateDisplaySetting('bgColor', this.value)">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">背景透明度 / Opacity: <span id="display-opacity-value">100</span>%</label>
+                    <input type="range" id="display-bg-opacity" min="0" max="100" value="100" style="width:100%;" oninput="updateDisplaySetting('bgOpacity', this.value)">
+                </div>
+
+                <div style="display:flex; gap:8px; margin-top:auto;">
+                    <button class="btn-nav" onclick="resetDisplaySettings()" style="flex:1; font-size:10px;">重置默认 / Reset</button>
+                    <button class="btn-nav" onclick="previewDisplaySettings()" style="flex:1; font-size:10px;">预览 / Preview</button>
+                </div>
+                <button class="step-next-btn" onclick="nextGuide(4)" style="margin-top:10px;">下一步</button>
+            </div>
+
             <div id="card-glossary" class="col-card">
-                <div class="col-title">3. 术语库 / Glossary <span class="step-badge">可选</span></div>
+                <div class="col-title">4. 术语库 / Glossary <span class="step-badge">可选</span></div>
                 <div id="glossary-list-area" class="glossary-list"><div style="color:#666; font-size:12px; text-align:center; padding:10px;">加载中... / Loading...</div></div>
                 <button class="step-next-btn" onclick="finishGuide()">完成配置</button>
             </div>
