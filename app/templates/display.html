@@ -216,16 +216,62 @@
                 }
             }
 
-            // 从 URL 参数读取初始设置
+            // 验证颜色值（6位十六进制）
+            function isValidColor(color) {
+                return /^#[0-9A-Fa-f]{6}$/.test(color);
+            }
+
+            // 从 URL 参数读取初始设置（带验证）
             function loadSettingsFromUrl() {
                 const params = new URLSearchParams(window.location.search);
                 const settings = {};
-                if (params.has('fs')) settings.fontSize = parseInt(params.get('fs'));
-                if (params.has('lh')) settings.lineHeight = parseFloat(params.get('lh'));
-                if (params.has('tc')) settings.transColor = '#' + params.get('tc');
-                if (params.has('oc')) settings.origColor = '#' + params.get('oc');
-                if (params.has('bc')) settings.bgColor = '#' + params.get('bc');
-                if (params.has('bo')) settings.bgOpacity = parseInt(params.get('bo'));
+
+                // 字体大小：10-72px
+                if (params.has('fs')) {
+                    const fs = parseInt(params.get('fs'));
+                    if (!isNaN(fs) && fs >= 10 && fs <= 72) {
+                        settings.fontSize = fs;
+                    }
+                }
+
+                // 行高：1.0-3.0
+                if (params.has('lh')) {
+                    const lh = parseFloat(params.get('lh'));
+                    if (!isNaN(lh) && lh >= 1.0 && lh <= 3.0) {
+                        settings.lineHeight = lh;
+                    }
+                }
+
+                // 颜色：6位十六进制
+                if (params.has('tc')) {
+                    const tc = '#' + params.get('tc');
+                    if (isValidColor(tc)) {
+                        settings.transColor = tc;
+                    }
+                }
+
+                if (params.has('oc')) {
+                    const oc = '#' + params.get('oc');
+                    if (isValidColor(oc)) {
+                        settings.origColor = oc;
+                    }
+                }
+
+                if (params.has('bc')) {
+                    const bc = '#' + params.get('bc');
+                    if (isValidColor(bc)) {
+                        settings.bgColor = bc;
+                    }
+                }
+
+                // 背景透明度：0-100
+                if (params.has('bo')) {
+                    const bo = parseInt(params.get('bo'));
+                    if (!isNaN(bo) && bo >= 0 && bo <= 100) {
+                        settings.bgOpacity = bo;
+                    }
+                }
+
                 if (Object.keys(settings).length > 0) {
                     applySettings(settings);
                 }
