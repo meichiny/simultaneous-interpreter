@@ -39,8 +39,21 @@
         });
     });
 
+    // 安全：验证 opener 是否同源
+    function isOpenerValid() {
+        try {
+            if (!window.opener) return false;
+            // 跨域访问会抛出异常
+            const openerOrigin = window.opener.location.origin;
+            return openerOrigin === window.location.origin;
+        } catch (e) {
+            // 跨域或无法访问
+            return false;
+        }
+    }
+
     function refreshLogs() {
-        if (window.opener && window.opener.sessionLogs) {
+        if (isOpenerValid() && window.opener.sessionLogs) {
             const newLogs = window.opener.sessionLogs;
             if (newLogs.length !== allLogs.length) {
                 allLogs = [...newLogs]; // 复制数组
@@ -160,8 +173,8 @@
         allLogs = [];
         filteredLogs = [];
 
-        // 同时清空 opener 的日志
-        if (window.opener && window.opener.sessionLogs) {
+        // 同时清空 opener 的日志（验证同源）
+        if (isOpenerValid() && window.opener.sessionLogs) {
             window.opener.sessionLogs = [];
             if (window.opener.clearLogs) {
                 window.opener.clearLogs();
