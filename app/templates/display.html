@@ -239,6 +239,13 @@
                 const data = e.data;
                 if (!data) return;
 
+                // 安全：验证消息来源（同源或预览模式）
+                const isPreview = urlParams.has('preview');
+                if (!isPreview && e.origin !== window.location.origin) {
+                    console.warn('[Security] 拒绝跨域消息:', e.origin);
+                    return;
+                }
+
                 switch (data.type) {
                     case 'textUpdate':
                         // 支持 textType 或 position 参数

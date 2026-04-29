@@ -643,7 +643,7 @@
         try {
             // 清除投影屏内容
             if (projectionWindow && !projectionWindow.closed) {
-                projectionWindow.postMessage({ type: 'clear' }, '*');
+                projectionWindow.postMessage({ type: 'clear' }, window.location.origin);
             }
 
             // 读取配置
@@ -941,7 +941,7 @@
                             bgColor: savedSettings.bgColor
                         }
                     }, '*');
-                    projectionWindow.postMessage({ type: 'connected' }, '*');
+                    projectionWindow.postMessage({ type: 'connected' }, window.location.origin);
                 }
             }, 500);
         }
@@ -952,7 +952,7 @@
         }
         window.projectionHeartbeatInterval = setInterval(() => {
             if (projectionWindow && !projectionWindow.closed) {
-                projectionWindow.postMessage({ type: 'heartbeat' }, '*');
+                projectionWindow.postMessage({ type: 'heartbeat' }, window.location.origin);
             } else {
                 clearInterval(window.projectionHeartbeatInterval);
                 window.projectionHeartbeatInterval = null;
@@ -1018,7 +1018,7 @@
             if (key === 'origColor') syncData.settings.origColor = value;
             if (key === 'bgColor') syncData.settings.bgColor = value;
             if (key === 'bgOpacity') syncData.settings.bgOpacity = value;
-            projectionWindow.postMessage(syncData, '*');
+            projectionWindow.postMessage(syncData, window.location.origin);
         }
     };
 
