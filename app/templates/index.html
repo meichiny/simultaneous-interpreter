@@ -71,6 +71,15 @@
         #card-glossary { flex: 0 0 calc(25% - 12px); min-width: 200px; }
         #card-display { flex: 0 0 calc(25% - 11px); min-width: 200px; }
 
+        /* 提示框样式 */
+        .tip-box { padding: 10px; border-radius: 6px; margin-top: 10px; font-size: 11px; color: #aaa; }
+        .tip-success { background: rgba(16,185,129,0.1); border: 1px dashed var(--status-green); }
+        .tip-warning { background: rgba(245,158,11,0.1); border: 1px dashed var(--status-yellow); }
+        .cable-status { margin-top: 8px; padding-top: 8px; border-top: 1px solid #444; }
+        .cable-status-row { display: flex; justify-content: space-between; margin-bottom: 3px; }
+        .audio-help-toggle { background: none; border: none; color: var(--accent); font-size: 10px; cursor: pointer; padding: 0; }
+        .audio-help-content { display: none; margin-top: 8px; padding: 8px; background: var(--bg-input); border-radius: 4px; font-size: 10px; line-height: 1.6; }
+
         /* 响应式断点 */
         @media (max-width: 1439px) {
             /* 1280-1439px：两排布局 */
@@ -215,6 +224,16 @@
             font-size: 11px;
             font-family: "Consolas", "Monaco", monospace;
         }
+        .hidden { display: none !important; }
+        .text-muted { color: #666; }
+        .text-muted-small { color: #666; font-size: 10px; margin-top: 3px; }
+        .text-white { color: #fff; }
+        .text-accent { color: var(--accent); }
+        .text-error { color: var(--status-red); }
+        .mt-1 { margin-top: 5px; }
+        .mt-2 { margin-top: 8px; }
+        .mb-1 { margin-bottom: 5px; }
+
         .log-item {
             margin-bottom: 6px;
             line-height: 1.4;
@@ -459,39 +478,37 @@
                         <option value="dual">双通道 / Dual (需要虚拟声卡)</option>
                     </select>
                 <!-- 单/双通道模式提示 -->
-                <div id="single-channel-tip" class="tip-box" style="background:rgba(16,185,129,0.1); border:1px dashed #10b981; padding:10px; border-radius:6px; margin-top:10px; font-size:11px; color:#aaa;">
-                    <div style="color:#10b981; font-weight:bold; margin-bottom:5px;">当前模式：单通道 / Single Channel</div>
+                <div id="single-channel-tip" class="tip-box tip-success">
+                    <div style="color:var(--status-green); font-weight:bold; margin-bottom:5px;">当前模式：单通道 / Single Channel</div>
                     只需真实麦克风，无需安装虚拟声卡。适合单向翻译场景（如演讲）。
-                    <div style="color:#666; font-size:10px; margin-top:3px;">Need only real microphone, no virtual cable required.</div>
+                    <div class="text-muted-small">Need only real microphone, no virtual cable required.</div>
                 </div>
 
-                <div id="dual-channel-tip" class="tip-box" style="background:rgba(245,158,11,0.1); border:1px dashed #f59e0b; padding:10px; border-radius:6px; margin-top:10px; font-size:11px; color:#aaa; display:none;">
-                    <div style="color:#f59e0b; font-weight:bold; margin-bottom:5px;">当前模式：双通道 / Dual Channel</div>
+                <div id="dual-channel-tip" class="tip-box tip-warning hidden">
+                    <div style="color:var(--status-yellow); font-weight:bold; margin-bottom:5px;">当前模式：双通道 / Dual Channel</div>
                     需要安装 VB-Cable 虚拟声卡。适合双向对话场景（如会议）。
-                    <div style="color:#666; font-size:10px; margin-top:3px;">Requires VB-Cable virtual audio cable.</div>
+                    <div class="text-muted-small">Requires VB-Cable virtual audio cable.</div>
                     
-                    <!-- 虚拟声卡检测状态 -->
-                    <div style="margin-top:8px; padding-top:8px; border-top:1px solid #444;">
-                        <div style="display:flex; justify-content:space-between; margin-bottom:3px;">
+                    <div class="cable-status">
+                        <div class="cable-status-row">
                             <span>Cable A (输出到会议):</span>
-                            <span id="cable-a-status" style="color:#666;">检测中...</span>
+                            <span id="cable-a-status" class="text-muted">检测中...</span>
                         </div>
-                        <div style="display:flex; justify-content:space-between;">
+                        <div class="cable-status-row">
                             <span>Cable B (从会议输入):</span>
-                            <span id="cable-b-status" style="color:#666;">检测中...</span>
+                            <span id="cable-b-status" class="text-muted">检测中...</span>
                         </div>
                     </div>
                     
-                    <!-- 设置说明折叠区 -->
-                    <div style="margin-top:8px;">
-                        <button onclick="toggleAudioHelp()" style="background:none; border:none; color:var(--accent); font-size:10px; cursor:pointer; padding:0;">
+                    <div class="mt-2">
+                        <button class="audio-help-toggle" onclick="toggleAudioHelp()">
                             ▼ 查看设置说明 / Setup Guide
                         </button>
-                        <div id="audio-help-content" style="display:none; margin-top:8px; padding:8px; background:var(--bg-input); border-radius:4px; font-size:10px; line-height:1.6;">
-                            <div style="color:#fff; margin-bottom:5px;">请前往 腾讯会议/Zoom/飞书/Teams 设置音频:</div>
-                            1. 扬声器 / Speaker → <span style="color:var(--accent)">Cable B</span> (声音流入AI)<br>
-                            2. 麦克风 / Mic → <span style="color:var(--accent)">Cable A</span> (翻译传给对方)<br>
-                            <div style="color:var(--status-red); margin-top:5px;">⚠️ 请勿选 16ch / Don't choose 16ch</div>
+                        <div id="audio-help-content" class="audio-help-content">
+                            <div class="text-white mb-1">请前往 腾讯会议/Zoom/飞书/Teams 设置音频:</div>
+                            1. 扬声器 / Speaker → <span class="text-accent">Cable B</span> (声音流入AI)<br>
+                            2. 麦克风 / Mic → <span class="text-accent">Cable A</span> (翻译传给对方)<br>
+                            <div class="text-error mt-1">⚠️ 请勿选 16ch / Don't choose 16ch</div>
                         </div>
                     </div>
                 </div>

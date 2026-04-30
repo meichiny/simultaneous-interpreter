@@ -570,6 +570,18 @@
 
 
     // --- 通道模式和 TTS 配置 ---
+    // --- 工具函数 ---
+
+    function toggleClass(elementId, className, shouldAdd) {
+        const el = document.getElementById(elementId);
+        if (!el) return;
+        if (shouldAdd) {
+            el.classList.add(className);
+        } else {
+            el.classList.remove(className);
+        }
+    }
+
     window.onChannelModeChange = function() {
         const mode = document.getElementById('channel-mode').value;
         const isDual = mode === 'dual';
@@ -588,10 +600,8 @@
         }
 
         // 显示/隐藏单/双通道提示框
-        const singleTip = document.getElementById('single-channel-tip');
-        const dualTip = document.getElementById('dual-channel-tip');
-        if (singleTip) singleTip.style.display = isDual ? 'none' : 'block';
-        if (dualTip) dualTip.style.display = isDual ? 'block' : 'none';
+        toggleClass('single-channel-tip', 'hidden', isDual);
+        toggleClass('dual-channel-tip', 'hidden', !isDual);
 
         // 双通道模式下更新虚拟声卡检测状态
         if (isDual) {
@@ -610,21 +620,18 @@
         const voiceBlocks = document.querySelectorAll('#voice-speak, #voice-listen');
         voiceBlocks.forEach(el => {
             const parent = el?.closest('.form-group');
-            if (parent) parent.style.display = enabled ? 'block' : 'none';
+            if (parent) parent.classList.toggle('hidden', !enabled);
         });
 
         // 显示/隐藏音色设置说明文字
-        const voiceHint = document.getElementById('voice-hint');
-        if (voiceHint) voiceHint.style.display = enabled ? 'block' : 'none';
+        toggleClass('voice-hint', 'hidden', !enabled);
     };
 
     // --- 音频帮助和虚拟声卡状态 ---
 
     window.toggleAudioHelp = function() {
         const helpContent = document.getElementById('audio-help-content');
-        if (helpContent) {
-            helpContent.style.display = helpContent.style.display === 'none' ? 'block' : 'none';
-        }
+        if (helpContent) helpContent.classList.toggle('hidden');
     };
 
     function updateStatusIndicator(element, isDetected) {
