@@ -393,23 +393,44 @@
     // 从 localStorage 加载显示设置
     function loadDisplaySettings() {
         const settings = Storage.get('displayTextSettings', {});
-        document.getElementById('display-font-size').value = settings.fontSize || defaultDisplaySettings.fontSize;
-        document.getElementById('display-size-value').textContent = settings.fontSize || defaultDisplaySettings.fontSize;
-        document.getElementById('display-line-height').value = settings.lineHeight || defaultDisplaySettings.lineHeight;
-        document.getElementById('display-lh-value').textContent = settings.lineHeight || defaultDisplaySettings.lineHeight;
+        const fontSize = settings.fontSize || defaultDisplaySettings.fontSize;
+        const lineHeight = settings.lineHeight || defaultDisplaySettings.lineHeight;
+        const bgOpacity = settings.bgOpacity || defaultDisplaySettings.bgOpacity;
+
+        // 字号 - 同步下拉框和输入框
+        const fontSizeInput = document.getElementById('display-font-size');
+        const fontSizeSelect = document.getElementById('display-font-size-select');
+        if (fontSizeInput) fontSizeInput.value = fontSize;
+        if (fontSizeSelect) fontSizeSelect.value = fontSize;
+
+        // 行高 - 同步下拉框和输入框
+        const lineHeightInput = document.getElementById('display-line-height');
+        const lineHeightSelect = document.getElementById('display-line-height-select');
+        if (lineHeightInput) lineHeightInput.value = lineHeight;
+        if (lineHeightSelect) lineHeightSelect.value = lineHeight;
+
+        // 颜色
         document.getElementById('display-trans-color').value = settings.transColor || defaultDisplaySettings.transColor;
         document.getElementById('display-orig-color').value = settings.origColor || defaultDisplaySettings.origColor;
         document.getElementById('display-bg-color').value = settings.bgColor || defaultDisplaySettings.bgColor;
-        document.getElementById('display-bg-opacity').value = settings.bgOpacity || defaultDisplaySettings.bgOpacity;
-        document.getElementById('display-opacity-value').textContent = settings.bgOpacity || defaultDisplaySettings.bgOpacity;
+
+        // 透明度
+        document.getElementById('display-bg-opacity').value = bgOpacity;
     }
 
     window.updateDisplaySetting = function(key, value) {
-        // 更新显示值
-        const valueElId = key === 'fontSize' ? 'display-size-value' :
-                         key === 'lineHeight' ? 'display-lh-value' :
-                         key === 'bgOpacity' ? 'display-opacity-value' : null;
-        if (valueElId) document.getElementById(valueElId).textContent = value;
+        // 同步下拉框和输入框
+        if (key === 'fontSize') {
+            const select = document.getElementById('display-font-size-select');
+            const input = document.getElementById('display-font-size');
+            if (select) select.value = value;
+            if (input) input.value = value;
+        } else if (key === 'lineHeight') {
+            const select = document.getElementById('display-line-height-select');
+            const input = document.getElementById('display-line-height');
+            if (select) select.value = value;
+            if (input) input.value = value;
+        }
 
         // 保存到 localStorage
         const settings = Storage.get('displayTextSettings', {});

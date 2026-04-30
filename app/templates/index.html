@@ -535,13 +535,40 @@
                 <div class="col-title">4. 显示设置 / Display <span class="step-badge">可选</span></div>
 
                 <div class="form-group">
-                    <label class="form-label">字号 / Font Size: <span id="display-size-value">13</span>px</label>
-                    <input type="range" id="display-font-size" min="10" max="32" value="13" style="width:100%;" oninput="updateDisplaySetting('fontSize', this.value)">
+                    <label class="form-label">字号 / Font Size (px)</label>
+                    <div style="display:flex; gap:8px;">
+                        <select id="display-font-size-select" style="flex:1;" onchange="document.getElementById('display-font-size').value=this.value; updateDisplaySetting('fontSize', this.value)">
+                            <option value="10">10px</option>
+                            <option value="12">12px</option>
+                            <option value="13" selected>13px</option>
+                            <option value="14">14px</option>
+                            <option value="16">16px</option>
+                            <option value="18">18px</option>
+                            <option value="20">20px</option>
+                            <option value="24">24px</option>
+                            <option value="28">28px</option>
+                            <option value="32">32px</option>
+                        </select>
+                        <input type="number" id="display-font-size" value="13" min="10" max="72" style="width:70px;" onchange="updateDisplaySetting('fontSize', this.value)">
+                    </div>
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">行高 / Line Height: <span id="display-lh-value">1.5</span></label>
-                    <input type="range" id="display-line-height" min="1" max="3" step="0.1" value="1.5" style="width:100%;" oninput="updateDisplaySetting('lineHeight', this.value)">
+                    <label class="form-label">行高 / Line Height</label>
+                    <div style="display:flex; gap:8px;">
+                        <select id="display-line-height-select" style="flex:1;" onchange="document.getElementById('display-line-height').value=this.value; updateDisplaySetting('lineHeight', this.value)">
+                            <option value="1.0">1.0</option>
+                            <option value="1.2">1.2</option>
+                            <option value="1.4">1.4</option>
+                            <option value="1.5" selected>1.5</option>
+                            <option value="1.6">1.6</option>
+                            <option value="1.8">1.8</option>
+                            <option value="2.0">2.0</option>
+                            <option value="2.5">2.5</option>
+                            <option value="3.0">3.0</option>
+                        </select>
+                        <input type="number" id="display-line-height" value="1.5" min="1" max="3" step="0.1" style="width:70px;" onchange="updateDisplaySetting('lineHeight', this.value)">
+                    </div>
                 </div>
 
                 <div class="form-group">
@@ -560,8 +587,15 @@
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">背景透明度 / Opacity: <span id="display-opacity-value">100</span>%</label>
-                    <input type="range" id="display-bg-opacity" min="0" max="100" value="100" style="width:100%;" oninput="updateDisplaySetting('bgOpacity', this.value)">
+                    <label class="form-label">背景透明度 / Opacity</label>
+                    <select id="display-bg-opacity" style="width:100%;" onchange="updateDisplaySetting('bgOpacity', this.value)">
+                        <option value="0">0% (完全透明)</option>
+                        <option value="20">20%</option>
+                        <option value="40">40%</option>
+                        <option value="60">60%</option>
+                        <option value="80">80%</option>
+                        <option value="100" selected>100% (不透明)</option>
+                    </select>
                 </div>
 
                 <div style="display:flex; gap:8px; margin-top:auto;">
