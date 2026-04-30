@@ -457,16 +457,54 @@
         projectionWindow.postMessage({ type, ...data }, window.location.origin);
     }
 
-    // 节流的文本更新通知
-    const notifyProjectionText = throttle((textType, text, isFinal) => {
+    // 投影屏文本更新队列（批量发送以避免频繁通信）
+    const projectionQueue = { trans: [], orig: [] };
+    let projectionFlushTimer = null;
+
+    function queueProjectionText(textType, text, isFinal) {
         if (!isWindowValid(projectionWindow)) return;
-        projectionWindow.postMessage({
-            type: 'textUpdate',
-            textType,
-            text,
-            isFinal
-        }, '*');
-    }, 50);
+
+        // 最终结果立即发送，不节流
+        if (isFinal) {
+            flushProjectionQueue();
+            projectionWindow.postMessage({
+                type: 'textUpdate',
+                textType,
+                text,
+                isFinal: true
+            }, '*');
+            return;
+        }
+
+        // 流式更新加入队列
+        projectionQueue[textType] = text;
+
+        // 使用防抖批量发送
+        if (projectionFlushTimer) clearTimeout(projectionFlushTimer);
+        projectionFlushTimer = setTimeout(() => {
+            flushProjectionQueue();
+        }, 50);
+    }
+
+    function flushProjectionQueue() {
+        if (projectionFlushTimer) {
+            clearTimeout(projectionFlushTimer);
+            projectionFlushTimer = null;
+        }
+
+        ['trans', 'orig'].forEach(textType => {
+            const text = projectionQueue[textType];
+            if (text !== undefined && isWindowValid(projectionWindow)) {
+                projectionWindow.postMessage({
+                    type: 'textUpdate',
+                    textType,
+                    text,
+                    isFinal: false
+                }, '*');
+                projectionQueue[textType] = [];
+            }
+        });
+    }
 
     window.previewDisplaySettings = function() {
         const settings = Storage.get('displayTextSettings', {});
@@ -1074,9 +1112,9 @@
         if (paneTrans) requestAnimationFrame(() => { paneTrans.scrollTop = paneTrans.scrollHeight; });
         if (paneOrig) requestAnimationFrame(() => { paneOrig.scrollTop = paneOrig.scrollHeight; });
 
-        // 向投影屏发送文本更新（使用节流）
+        // 向投影屏发送文本更新（使用队列批量发送）
         const textType = isTranslated ? 'trans' : 'orig';
-        notifyProjectionText(textType, data.text, data.isFinal);
+        queueProjectionText(textType, data.text, data.isFinal);
     }
 
     // --- SocketIO 事件绑定 ---
