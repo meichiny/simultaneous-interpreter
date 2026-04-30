@@ -13,15 +13,37 @@
 
     const socket = io();
     let currentLatency = 0;
-    const HIGH_LATENCY_THRESHOLD = 400;
+    
     let isRunning = false;
     let activeStreams = [];
     let ttsConfig = { speak: true, listen: true };
 
-    // 日志存储
+    // 日志存储（带上限）
     let sessionLogs = [];
-    const MAX_SIDEBAR_LOGS = 50;
-    let logWindow = null; // 完整日志窗口引用
+    
+    
+    let logWindow = null;
+
+    // 定时器ID管理
+    const intervalIds = {
+        audioContext: null,
+        ping: null,
+        projectionHeartbeat: null
+    };
+
+    // 配置常量
+    const CONFIG = {
+        HIGH_LATENCY_THRESHOLD: 400,
+        MAX_VISIBLE_SENTENCES: 100,
+        MAX_SIDEBAR_LOGS: 50,
+        MAX_TOTAL_LOGS: 5000,
+        VAD_THRESHOLD: 0.5,
+        VAD_HANGOVER_MS: 500,
+        HEARTBEAT_INTERVAL: 2000,
+        PING_INTERVAL: 2000,
+        PROJECTION_THROTTLE_MS: 50,
+        LOG_RENDER_THROTTLE_MS: 100
+    };
 
     // --- 投影屏和设置 ---
     let projectionWindow = null;
@@ -111,7 +133,7 @@
     }
 
     // 自动唤醒 AudioContext
-    setInterval(() => {
+    intervalIds.audioContext = setInterval(() => {
         if (isRunning) {
             if (ctxSpeak.state === 'suspended') ctxSpeak.resume();
             if (ctxListen.state === 'suspended') ctxListen.resume();
@@ -120,11 +142,10 @@
 
     // 防误触保护 + 关闭投影屏
     window.onbeforeunload = function(e) {
-        // 清除心跳间隔
-        if (window.projectionHeartbeatInterval) {
-            clearInterval(window.projectionHeartbeatInterval);
-            window.projectionHeartbeatInterval = null;
-        }
+        // 清除所有定时器
+        Object.values(intervalIds).forEach(id => {
+            if (id) clearInterval(id);
+        });
         // 关闭投影屏
         if (projectionWindow && !projectionWindow.closed) {
             projectionWindow.close();
@@ -145,7 +166,7 @@
     let calibrationMaxEnergy = 0;
 
     // --- 向导 ---
-    window.resetGuide = function() { sessionStorage.removeItem('guideShown'); location.reload(); };
+    window.resetGuide = function() { SessionStorage.remove('guideShown'); location.reload(); };
 
     window.nextGuide = function(step) {
         document.querySelectorAll('.spotlight-active').forEach(e => e.classList.remove('spotlight-active'));
@@ -204,8 +225,11 @@
 
     // --- 日志功能 ---
     function addLog(logData) {
-        // 存储到数组
+        // 存储到数组，限制总数
         sessionLogs.push(logData);
+        if (sessionLogs.length > CONFIG.MAX_TOTAL_LOGS) {
+            sessionLogs = sessionLogs.slice(-MAX_TOTAL_LOGS);
+        }
 
         // 渲染到侧边栏
         renderSidebarLogs();
@@ -234,7 +258,7 @@
         const filteredLogs = sessionLogs.filter(log => SIDEBAR_LOG_LEVELS.includes(log.level));
 
         // 只显示最近的 MAX_SIDEBAR_LOGS 条
-        const recentLogs = filteredLogs.slice(-MAX_SIDEBAR_LOGS);
+        const recentLogs = filteredLogs.slice(-CONFIG.MAX_SIDEBAR_LOGS);
 
         // 生成 HTML
         const html = recentLogs.map(log => {
@@ -251,12 +275,6 @@
 
         // 自动滚动到底部
         container.scrollTop = container.scrollHeight;
-    }
-
-    function escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
     }
 
     function openFullLogs() {
@@ -334,7 +352,7 @@
 
     function checkStartButtonState() {
         const btn = document.getElementById('startBtn');
-        if (currentLatency > HIGH_LATENCY_THRESHOLD) {
+        if (currentLatency > CONFIG.HIGH_LATENCY_THRESHOLD) {
             btn.disabled = true; btn.innerText = `延迟过高 / High Latency (${currentLatency}ms)`; btn.classList.add('high-latency');
         } else if (socket.connected) {
             btn.disabled = false; btn.innerText = '开始运行 / Start'; btn.classList.remove('high-latency');
@@ -380,49 +398,36 @@
 
     // 从 localStorage 加载显示设置
     function loadDisplaySettings() {
-        const saved = localStorage.getItem('displayTextSettings');
-        if (saved) {
-            const settings = JSON.parse(saved);
-            document.getElementById('display-font-size').value = settings.fontSize || defaultDisplaySettings.fontSize;
-            document.getElementById('display-size-value').textContent = settings.fontSize || defaultDisplaySettings.fontSize;
-            document.getElementById('display-line-height').value = settings.lineHeight || defaultDisplaySettings.lineHeight;
-            document.getElementById('display-lh-value').textContent = settings.lineHeight || defaultDisplaySettings.lineHeight;
-            document.getElementById('display-trans-color').value = settings.transColor || defaultDisplaySettings.transColor;
-            document.getElementById('display-orig-color').value = settings.origColor || defaultDisplaySettings.origColor;
-            document.getElementById('display-bg-color').value = settings.bgColor || defaultDisplaySettings.bgColor;
-            document.getElementById('display-bg-opacity').value = settings.bgOpacity || defaultDisplaySettings.bgOpacity;
-            document.getElementById('display-opacity-value').textContent = settings.bgOpacity || defaultDisplaySettings.bgOpacity;
-        }
+        const settings = Storage.get('displayTextSettings', {});
+        document.getElementById('display-font-size').value = settings.fontSize || defaultDisplaySettings.fontSize;
+        document.getElementById('display-size-value').textContent = settings.fontSize || defaultDisplaySettings.fontSize;
+        document.getElementById('display-line-height').value = settings.lineHeight || defaultDisplaySettings.lineHeight;
+        document.getElementById('display-lh-value').textContent = settings.lineHeight || defaultDisplaySettings.lineHeight;
+        document.getElementById('display-trans-color').value = settings.transColor || defaultDisplaySettings.transColor;
+        document.getElementById('display-orig-color').value = settings.origColor || defaultDisplaySettings.origColor;
+        document.getElementById('display-bg-color').value = settings.bgColor || defaultDisplaySettings.bgColor;
+        document.getElementById('display-bg-opacity').value = settings.bgOpacity || defaultDisplaySettings.bgOpacity;
+        document.getElementById('display-opacity-value').textContent = settings.bgOpacity || defaultDisplaySettings.bgOpacity;
     }
 
     window.updateDisplaySetting = function(key, value) {
         // 更新显示值
-        if (key === 'fontSize') {
-            document.getElementById('display-size-value').textContent = value;
-        } else if (key === 'lineHeight') {
-            document.getElementById('display-lh-value').textContent = value;
-        } else if (key === 'bgOpacity') {
-            document.getElementById('display-opacity-value').textContent = value;
-        }
+        const valueElId = key === 'fontSize' ? 'display-size-value' :
+                         key === 'lineHeight' ? 'display-lh-value' :
+                         key === 'bgOpacity' ? 'display-opacity-value' : null;
+        if (valueElId) document.getElementById(valueElId).textContent = value;
 
         // 保存到 localStorage
-        const settings = JSON.parse(localStorage.getItem('displayTextSettings') || '{}');
+        const settings = Storage.get('displayTextSettings', {});
         settings[key] = value;
-        localStorage.setItem('displayTextSettings', JSON.stringify(settings));
+        Storage.set('displayTextSettings', settings);
 
         // 同步到投影屏
-        if (projectionWindow && !projectionWindow.closed) {
-            const syncSettings = {};
-            syncSettings[key] = value;
-            projectionWindow.postMessage({
-                type: 'settings',
-                settings: syncSettings
-            }, '*');
-        }
+        notifyProjection('settings', { [key]: value });
     };
 
     window.resetDisplaySettings = function() {
-        localStorage.removeItem('displayTextSettings');
+        Storage.remove('displayTextSettings');
         document.getElementById('display-font-size').value = defaultDisplaySettings.fontSize;
         document.getElementById('display-size-value').textContent = defaultDisplaySettings.fontSize;
         document.getElementById('display-line-height').value = defaultDisplaySettings.lineHeight;
@@ -434,9 +439,8 @@
         document.getElementById('display-opacity-value').textContent = defaultDisplaySettings.bgOpacity;
     };
 
-    window.previewDisplaySettings = function() {
-        // 在新窗口预览设置效果
-        const settings = JSON.parse(localStorage.getItem('displayTextSettings') || '{}');
+    // 统一的 URL 参数构建函数
+    function buildDisplayUrlParams(settings) {
         const params = new URLSearchParams();
         params.set('fs', settings.fontSize || defaultDisplaySettings.fontSize);
         params.set('lh', settings.lineHeight || defaultDisplaySettings.lineHeight);
@@ -444,13 +448,35 @@
         params.set('oc', (settings.origColor || defaultDisplaySettings.origColor).replace('#', ''));
         params.set('bo', settings.bgOpacity || defaultDisplaySettings.bgOpacity);
         params.set('bc', (settings.bgColor || defaultDisplaySettings.bgColor).replace('#', ''));
+        return params;
+    }
+
+    // 统一的投影屏通知函数
+    function notifyProjection(type, data) {
+        if (!isWindowValid(projectionWindow)) return;
+        projectionWindow.postMessage({ type, ...data }, window.location.origin);
+    }
+
+    // 节流的文本更新通知
+    const notifyProjectionText = throttle((textType, text, isFinal) => {
+        if (!isWindowValid(projectionWindow)) return;
+        projectionWindow.postMessage({
+            type: 'textUpdate',
+            textType,
+            text,
+            isFinal
+        }, '*');
+    }, 50);
+
+    window.previewDisplaySettings = function() {
+        const settings = Storage.get('displayTextSettings', {});
+        const params = buildDisplayUrlParams(settings);
         params.set('preview', '1');
 
         const previewWindow = window.open('/display?' + params.toString(), 'previewDisplay', 'width=600,height=400');
 
-        // 发送测试文本
         setTimeout(() => {
-            if (previewWindow && !previewWindow.closed) {
+            if (isWindowValid(previewWindow)) {
                 previewWindow.postMessage({
                     type: 'textUpdate',
                     position: 'top',
@@ -492,7 +518,7 @@
 
     // 应用显示设置到内嵌翻译界面
     function applyDisplaySettingsToEmbedded() {
-        const settings = JSON.parse(localStorage.getItem('displayTextSettings') || '{}');
+        const settings = Storage.get('displayTextSettings', {});
         const root = document.documentElement;
 
         // 应用 CSS 变量
@@ -523,12 +549,12 @@
         }
 
         // 保存配置到 session
-        sessionStorage.setItem('channelMode', mode);
+        SessionStorage.set('channelMode', mode);
     };
 
     window.onTtsToggle = function() {
         const enabled = document.getElementById('tts-enable').checked;
-        sessionStorage.setItem('ttsEnabled', enabled ? 'true' : 'false');
+        SessionStorage.set('ttsEnabled', enabled);
 
         // 显示/隐藏音色选择
         const voiceBlocks = document.querySelectorAll('#voice-speak, #voice-listen');
@@ -541,9 +567,9 @@
     // 初始化配置 UI
     function initConfigUI() {
         // 恢复保存的配置
-        const savedMode = sessionStorage.getItem('channelMode') || 'single';
-        const savedTts = sessionStorage.getItem('ttsEnabled');
-        const savedRunMode = sessionStorage.getItem('runMode') || 'embedded';
+        const savedMode = SessionStorage.get('channelMode', 'single');
+        const savedTts = SessionStorage.get('ttsEnabled');
+        const savedRunMode = SessionStorage.get('runMode', 'embedded');
 
         document.getElementById('channel-mode').value = savedMode;
         if (savedTts !== null) {
@@ -638,13 +664,32 @@
         } catch (e) { console.error(e); }
     }
 
+    // --- 语言对校验 ---
+    function validateLanguagePair(src, dst) {
+        const zhEn = ['zh', 'en'];
+
+        if (src === 'zhen') {
+            if (dst !== 'zhen') {
+                return { valid: false, message: '中英混说模式：源和目标都必须选"中英混说" / Mixed mode requires both set to Mixed' };
+            }
+        } else if (zhEn.includes(src)) {
+            if (dst === 'zhen') {
+                return { valid: false, message: '源语言或目标语言至少有一个须为中文或英文 / One side must be Chinese or English' };
+            }
+        } else {
+            if (!zhEn.includes(dst) && dst !== src) {
+                return { valid: false, message: '源语言或目标语言至少有一个须为中文或英文 / One side must be Chinese or English' };
+            }
+        }
+
+        return { valid: true, message: '' };
+    }
+
     // --- 会话控制 ---
     window.startSession = async function() {
         try {
             // 清除投影屏内容
-            if (projectionWindow && !projectionWindow.closed) {
-                projectionWindow.postMessage({ type: 'clear' }, window.location.origin);
-            }
+            notifyProjection('clear');
 
             // 读取配置
             const channelMode = document.getElementById('channel-mode')?.value || 'single';
@@ -671,22 +716,12 @@
             ttsConfig.listen = ttsEnabled && (langTheirSpeak !== langMyHear);
 
             // 语言方向校验
-            const zhEn = ['zh', 'en'];
-            if (langMySpeak === 'zhen' || langTheirHear === 'zhen') {
-                if (langMySpeak !== 'zhen' || langTheirHear !== 'zhen') {
-                    throw new Error('中英混说模式：源和目标都必须选"中英混说" / Mixed mode requires both set to Mixed');
-                }
-            } else if (!zhEn.includes(langMySpeak) && !zhEn.includes(langTheirHear)) {
-                throw new Error('源语言或目标语言至少有一个须为中文或英文 / One side must be Chinese or English');
-            }
-            if (langTheirSpeak !== langMyHear && hasCableB) {
-                if (langTheirSpeak === 'zhen' || langMyHear === 'zhen') {
-                    if (langTheirSpeak !== 'zhen' || langMyHear !== 'zhen') {
-                        throw new Error('中英混说模式：源和目标都必须选"中英混说" / Mixed mode requires both set to Mixed');
-                    }
-                } else if (!zhEn.includes(langTheirSpeak) && !zhEn.includes(langMyHear)) {
-                    throw new Error('源语言或目标语言至少有一个须为中文或英文 / One side must be Chinese or English');
-                }
+            const result = validateLanguagePair(langMySpeak, langTheirHear);
+            if (!result.valid) throw new Error(result.message);
+
+            if (hasCableB) {
+                const result2 = validateLanguagePair(langTheirSpeak, langMyHear);
+                if (!result2.valid) throw new Error(result2.message);
             }
 
             const apiDirSpeak = `${langMySpeak}-${langTheirHear}`;
@@ -819,8 +854,8 @@
         // speak 通道：VAD 过滤 — 静音时发送零帧保持流存活
         // listen 通道：远端音频，直接发送
         let _lastSpeechTime = 0;
-        const VAD_THRESHOLD = 0.5;
-        const VAD_HANGOVER_MS = 500;
+        
+        
 
         processor.port.onmessage = async (e) => {
             if (!isRunning) return;
@@ -831,8 +866,8 @@
                 try {
                     const prob = await detectSpeech(float32);
                     const now = Date.now();
-                    if (prob > VAD_THRESHOLD) _lastSpeechTime = now;
-                    if (now - _lastSpeechTime > VAD_HANGOVER_MS) {
+                    if (prob > CONFIG.VAD_THRESHOLD) _lastSpeechTime = now;
+                    if (now - _lastSpeechTime > CONFIG.VAD_HANGOVER_MS) {
                         const silenceFrame = new ArrayBuffer(int16.byteLength);
                         socket.emit(`audio_chunk_${prefix}`, silenceFrame);
                         return;
@@ -911,19 +946,13 @@
 
     // --- 投影屏功能 ---
     window.openDisplayWindow = function() {
-        if (projectionWindow && !projectionWindow.closed) {
+        if (isWindowValid(projectionWindow)) {
             projectionWindow.focus();
             return;
         }
         // 从 localStorage 读取配置页的显示设置
-        const savedSettings = JSON.parse(localStorage.getItem('displayTextSettings') || '{}');
-        const params = new URLSearchParams();
-        if (savedSettings.fontSize) params.set('fs', savedSettings.fontSize);
-        if (savedSettings.lineHeight) params.set('lh', savedSettings.lineHeight);
-        if (savedSettings.transColor) params.set('tc', savedSettings.transColor.replace('#', ''));
-        if (savedSettings.origColor) params.set('oc', savedSettings.origColor.replace('#', ''));
-        if (savedSettings.bgColor) params.set('bc', savedSettings.bgColor.replace('#', ''));
-        if (savedSettings.bgOpacity) params.set('bo', savedSettings.bgOpacity);
+        const savedSettings = Storage.get('displayTextSettings', {});
+        const params = buildDisplayUrlParams(savedSettings);
 
         const url = '/display?' + params.toString();
         projectionWindow = window.open(url, 'projectionScreen', 'width=900,height=700,location=no,menubar=no,toolbar=no');
@@ -931,7 +960,7 @@
         // 发送初始设置
         if (projectionWindow) {
             setTimeout(() => {
-                if (projectionWindow && !projectionWindow.closed) {
+                if (isWindowValid(projectionWindow)) {
                     projectionWindow.postMessage({
                         type: 'settings',
                         settings: {
@@ -940,24 +969,24 @@
                             origColor: savedSettings.origColor,
                             bgColor: savedSettings.bgColor
                         }
-                    }, '*');
+                    }, window.location.origin);
                     projectionWindow.postMessage({ type: 'connected' }, window.location.origin);
                 }
             }, 500);
         }
 
         // 启动心跳检测（每2秒发送一次）
-        if (window.projectionHeartbeatInterval) {
-            clearInterval(window.projectionHeartbeatInterval);
+        if (intervalIds.projectionHeartbeat) {
+            clearInterval(intervalIds.projectionHeartbeat);
         }
-        window.projectionHeartbeatInterval = setInterval(() => {
-            if (projectionWindow && !projectionWindow.closed) {
+        intervalIds.projectionHeartbeat = setInterval(() => {
+            if (isWindowValid(projectionWindow)) {
                 projectionWindow.postMessage({ type: 'heartbeat' }, window.location.origin);
             } else {
-                clearInterval(window.projectionHeartbeatInterval);
-                window.projectionHeartbeatInterval = null;
+                clearInterval(intervalIds.projectionHeartbeat);
+                intervalIds.projectionHeartbeat = null;
             }
-        }, 2000);
+        }, CONFIG.PING_INTERVAL);
     };
 
     window.toggleTextSettings = function() {
@@ -965,7 +994,7 @@
         const overlay = document.getElementById('text-settings-overlay');
         if (panel.style.display === 'none' || panel.style.display === '') {
             // 打开面板时加载当前设置
-            const savedSettings = JSON.parse(localStorage.getItem('displayTextSettings') || '{}');
+            const savedSettings = Storage.get('displayTextSettings', {});
             document.getElementById('setting-font-size').value = savedSettings.fontSize || defaultDisplaySettings.fontSize;
             document.getElementById('setting-size-value').innerText = savedSettings.fontSize || defaultDisplaySettings.fontSize;
             document.getElementById('setting-line-height').value = savedSettings.lineHeight || defaultDisplaySettings.lineHeight;
@@ -989,7 +1018,6 @@
         // 更新UI显示值
         if (key === 'fontSize') {
             document.getElementById('setting-size-value').innerText = value;
-            // 更新主窗口样式
             document.documentElement.style.setProperty('--trans-font-size', value + 'px');
         } else if (key === 'lineHeight') {
             document.getElementById('setting-lh-value').innerText = value;
@@ -1004,22 +1032,13 @@
             document.getElementById('setting-opacity-value').innerText = value;
         }
 
-        // 保存到 localStorage 以便持久化
-        const savedSettings = JSON.parse(localStorage.getItem('displayTextSettings') || '{}');
+        // 保存到 localStorage
+        const savedSettings = Storage.get('displayTextSettings', {});
         savedSettings[key] = value;
-        localStorage.setItem('displayTextSettings', JSON.stringify(savedSettings));
+        Storage.set('displayTextSettings', savedSettings);
 
         // 同步到投影屏
-        if (projectionWindow && !projectionWindow.closed) {
-            const syncData = { type: 'settings', settings: {} };
-            if (key === 'fontSize') syncData.settings.fontSize = value;
-            if (key === 'lineHeight') syncData.settings.lineHeight = value;
-            if (key === 'transColor') syncData.settings.transColor = value;
-            if (key === 'origColor') syncData.settings.origColor = value;
-            if (key === 'bgColor') syncData.settings.bgColor = value;
-            if (key === 'bgOpacity') syncData.settings.bgOpacity = value;
-            projectionWindow.postMessage(syncData, window.location.origin);
-        }
+        notifyProjection('settings', { [key]: value });
     };
 
     // --- 字幕更新 ---
@@ -1046,8 +1065,8 @@
                 span.innerText = data.text + ' '; targetPane.insertBefore(span, targetPending);
                 if (targetPending) targetPending.innerText = targetPane === paneOrig ? 'Ready' : '';
                 const finalSentences = targetPane.querySelectorAll('.sentence-final');
-                const MAX_VISIBLE = 100;
-                if (finalSentences.length > MAX_VISIBLE) {
+                
+                if (finalSentences.length > CONFIG.MAX_VISIBLE_SENTENCES) {
                     for (let i = 0; i < finalSentences.length - MAX_VISIBLE; i++) finalSentences[i].remove();
                 }
             }
@@ -1055,16 +1074,9 @@
         if (paneTrans) requestAnimationFrame(() => { paneTrans.scrollTop = paneTrans.scrollHeight; });
         if (paneOrig) requestAnimationFrame(() => { paneOrig.scrollTop = paneOrig.scrollHeight; });
 
-        // 向投影屏发送文本更新
-        if (projectionWindow && !projectionWindow.closed) {
-            const textType = isTranslated ? 'trans' : 'orig';
-            projectionWindow.postMessage({
-                type: 'textUpdate',
-                textType: textType,
-                text: data.text,
-                isFinal: data.isFinal
-            }, '*');
-        }
+        // 向投影屏发送文本更新（使用节流）
+        const textType = isTranslated ? 'trans' : 'orig';
+        notifyProjectionText(textType, data.text, data.isFinal);
     }
 
     // --- SocketIO 事件绑定 ---
@@ -1101,7 +1113,7 @@
         socket.on('billing_update', d => updateBillingUI(d));
         socket.on('log_update', d => addLog(d));
 
-        setInterval(() => { if (socket.connected) socket.emit('ping_from_client', { t: Date.now() }); }, 2000);
+        intervalIds.ping = setInterval(() => { if (socket.connected) socket.emit('ping_from_client', { t: Date.now() }); }, CONFIG.PING_INTERVAL);
         if (socket.connected) updateStatus('connected', '服务已连接 / Service Connected');
     }
 
@@ -1150,10 +1162,10 @@
         loadGlossary();
         bindSocketEvents();
 
-        if (!sessionStorage.getItem('guideShown')) {
+        if (!SessionStorage.get('guideShown')) {
             document.getElementById('guide-mask').style.display = 'block';
             document.getElementById('guide-modal').style.display = 'flex';
-            sessionStorage.setItem('guideShown', 'true');
+            SessionStorage.set('guideShown', true);
         } else {
             document.querySelectorAll('.spotlight-active').forEach(e => e.classList.remove('spotlight-active'));
         }
