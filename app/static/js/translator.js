@@ -581,6 +581,17 @@
             theirSpeakBlock.style.display = isDual ? 'block' : 'none';
         }
 
+        // 显示/隐藏单/双通道提示框
+        const singleTip = document.getElementById('single-channel-tip');
+        const dualTip = document.getElementById('dual-channel-tip');
+        if (singleTip) singleTip.style.display = isDual ? 'none' : 'block';
+        if (dualTip) dualTip.style.display = isDual ? 'block' : 'none';
+
+        // 双通道模式下更新虚拟声卡检测状态
+        if (isDual) {
+            updateCableStatus();
+        }
+
         // 保存配置到 session
         SessionStorage.set('channelMode', mode);
     };
@@ -596,6 +607,50 @@
             if (parent) parent.style.display = enabled ? 'block' : 'none';
         });
     };
+
+// --- 音频帮助和虚拟声卡状态 ---
+
+window.toggleAudioHelp = function() {
+    const helpContent = document.getElementById('audio-help-content');
+    if (helpContent) {
+        helpContent.style.display = helpContent.style.display === 'none' ? 'block' : 'none';
+    }
+};
+
+function updateCableStatus() {
+    // 检测 Cable A 和 Cable B 是否在设备列表中
+    const micSelect = document.getElementById('dev-real-mic');
+    const spkSelect = document.getElementById('dev-real-spk');
+    
+    const cableAStatus = document.getElementById('cable-a-status');
+    const cableBStatus = document.getElementById('cable-b-status');
+    
+    if (!cableAStatus || !cableBStatus) return;
+    
+    const hasCableA = Array.from(micSelect?.options || []).some(opt => 
+        opt.text.toLowerCase().includes('cable a') || opt.text.toLowerCase().includes('cable-a')
+    );
+    const hasCableB = Array.from(spkSelect?.options || []).some(opt => 
+        opt.text.toLowerCase().includes('cable b') || opt.text.toLowerCase().includes('cable-b')
+    );
+    
+    if (hasCableA) {
+        cableAStatus.textContent = '✓ 已检测到';
+        cableAStatus.style.color = '#10b981';
+    } else {
+        cableAStatus.textContent = '✗ 未检测到';
+        cableAStatus.style.color = '#ef4444';
+    }
+    
+    if (hasCableB) {
+        cableBStatus.textContent = '✓ 已检测到';
+        cableBStatus.style.color = '#10b981';
+    } else {
+        cableBStatus.textContent = '✗ 未检测到';
+        cableBStatus.style.color = '#ef4444';
+    }
+}
+
 
     // 初始化配置 UI
     function initConfigUI() {
@@ -1142,14 +1197,6 @@
         await initDevices();
         loadGlossary();
         bindSocketEvents();
-
-        if (!SessionStorage.get('guideShown')) {
-            document.getElementById('guide-mask').style.display = 'block';
-            document.getElementById('guide-modal').style.display = 'flex';
-            SessionStorage.set('guideShown', true);
-        } else {
-            document.querySelectorAll('.spotlight-active').forEach(e => e.classList.remove('spotlight-active'));
-        }
     });
 
 })();
