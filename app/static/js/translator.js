@@ -47,12 +47,6 @@
 
     // --- 投影屏和设置 ---
     let projectionWindow = null;
-    let textSettings = {
-        fontSize: 13,
-        transColor: '#ffffff',
-        origColor: '#b3b3b3',
-        bgColor: '#000000'
-    };
 
     // PCM 流式播放（AudioWorklet 环形缓冲区，消除分段卡顿）
     const TTS_SAMPLE_RATE = 24000;
@@ -1025,58 +1019,6 @@
                 intervalIds.projectionHeartbeat = null;
             }
         }, CONFIG.PING_INTERVAL);
-    };
-
-    window.toggleTextSettings = function() {
-        const panel = document.getElementById('text-settings-panel');
-        const overlay = document.getElementById('text-settings-overlay');
-        if (panel.style.display === 'none' || panel.style.display === '') {
-            // 打开面板时加载当前设置
-            const savedSettings = Storage.get('displayTextSettings', {});
-            document.getElementById('setting-font-size').value = savedSettings.fontSize || defaultDisplaySettings.fontSize;
-            document.getElementById('setting-size-value').innerText = savedSettings.fontSize || defaultDisplaySettings.fontSize;
-            document.getElementById('setting-line-height').value = savedSettings.lineHeight || defaultDisplaySettings.lineHeight;
-            document.getElementById('setting-lh-value').innerText = savedSettings.lineHeight || defaultDisplaySettings.lineHeight;
-            document.getElementById('setting-trans-color').value = savedSettings.transColor || defaultDisplaySettings.transColor;
-            document.getElementById('setting-orig-color').value = savedSettings.origColor || defaultDisplaySettings.origColor;
-            document.getElementById('setting-bg-color').value = savedSettings.bgColor || defaultDisplaySettings.bgColor;
-            document.getElementById('setting-bg-opacity').value = savedSettings.bgOpacity || defaultDisplaySettings.bgOpacity;
-            document.getElementById('setting-opacity-value').innerText = savedSettings.bgOpacity || defaultDisplaySettings.bgOpacity;
-            panel.style.display = 'block';
-            overlay.style.display = 'block';
-        } else {
-            panel.style.display = 'none';
-            overlay.style.display = 'none';
-        }
-    };
-
-    window.updateSetting = function(key, value) {
-        textSettings[key] = value;
-
-        // 更新UI显示值
-        if (key === 'fontSize') {
-            document.getElementById('setting-size-value').innerText = value;
-            document.documentElement.style.setProperty('--trans-font-size', value + 'px');
-        } else if (key === 'lineHeight') {
-            document.getElementById('setting-lh-value').innerText = value;
-            document.documentElement.style.setProperty('--line-height', value);
-        } else if (key === 'transColor') {
-            document.documentElement.style.setProperty('--trans-text-color', value);
-        } else if (key === 'origColor') {
-            document.documentElement.style.setProperty('--orig-text-color', value);
-        } else if (key === 'bgColor') {
-            document.documentElement.style.setProperty('--action-bg-color', value);
-        } else if (key === 'bgOpacity') {
-            document.getElementById('setting-opacity-value').innerText = value;
-        }
-
-        // 保存到 localStorage
-        const savedSettings = Storage.get('displayTextSettings', {});
-        savedSettings[key] = value;
-        Storage.set('displayTextSettings', savedSettings);
-
-        // 同步到投影屏
-        notifyProjection('settings', { [key]: value });
     };
 
     // --- 字幕更新 ---

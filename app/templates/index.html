@@ -598,7 +598,6 @@
                 </div>
                 <div style="display: flex; align-items: center; gap: 8px;">
                     <button class="btn-nav" onclick="openDisplayWindow()" style="font-size: 10px; padding: 2px 8px;">📺 打开投影屏</button>
-                    <button class="btn-nav" onclick="toggleTextSettings()" style="font-size: 10px; padding: 2px 8px;">🎨 字体设置</button>
                     <div class="action-close-btn" onclick="stopSession()" title="退出">✕</div>
                 </div>
             </div>
@@ -645,45 +644,7 @@
     <audio id="player-for-cable-a" style="display:none"></audio>
     <audio id="player-for-headset" style="display:none"></audio>
 
-    <!-- 字体设置面板 -->
-    <div id="text-settings-panel" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:rgba(30,30,30,0.95); border:1px solid #444; border-radius:12px; padding:25px; width:300px; z-index:2000; backdrop-filter:blur(10px);">
-        <div style="font-size:16px; margin-bottom:20px; text-align:center;">文字显示设置</div>
 
-        <div style="margin-bottom:15px;">
-            <label style="display:block; font-size:11px; color:#888; margin-bottom:8px;">文字大小 / Font Size: <span id="setting-size-value">13</span>px</label>
-            <input type="range" id="setting-font-size" min="10" max="32" value="13" style="width:100%;" oninput="updateSetting('fontSize', this.value)">
-        </div>
-
-        <div style="margin-bottom:15px;">
-            <label style="display:block; font-size:11px; color:#888; margin-bottom:8px;">行高 / Line Height: <span id="setting-lh-value">1.5</span></label>
-            <input type="range" id="setting-line-height" min="1" max="3" step="0.1" value="1.5" style="width:100%;" oninput="updateSetting('lineHeight', this.value)">
-        </div>
-
-        <div style="margin-bottom:15px;">
-            <label style="display:block; font-size:11px; color:#888; margin-bottom:8px;">译文颜色 / Trans Color</label>
-            <input type="color" id="setting-trans-color" value="#ffffff" style="width:100%; height:35px; border:none; border-radius:4px; cursor:pointer;" oninput="updateSetting('transColor', this.value)">
-        </div>
-
-        <div style="margin-bottom:15px;">
-            <label style="display:block; font-size:11px; color:#888; margin-bottom:8px;">原文颜色 / Orig Color</label>
-            <input type="color" id="setting-orig-color" value="#b3b3b3" style="width:100%; height:35px; border:none; border-radius:4px; cursor:pointer;" oninput="updateSetting('origColor', this.value)">
-        </div>
-
-        <div style="margin-bottom:15px;">
-            <label style="display:block; font-size:11px; color:#888; margin-bottom:8px;">背景颜色 / Background</label>
-            <input type="color" id="setting-bg-color" value="#000000" style="width:100%; height:35px; border:none; border-radius:4px; cursor:pointer;" oninput="updateSetting('bgColor', this.value)">
-        </div>
-
-        <div style="margin-bottom:15px;">
-            <label style="display:block; font-size:11px; color:#888; margin-bottom:8px;">背景透明度 / Opacity: <span id="setting-opacity-value">100</span>%</label>
-            <input type="range" id="setting-bg-opacity" min="0" max="100" value="100" style="width:100%;" oninput="updateSetting('bgOpacity', this.value)">
-        </div>
-
-        <button onclick="toggleTextSettings()" style="width:100%; padding:10px; background:var(--accent); border:none; border-radius:6px; color:#fff; font-size:13px; cursor:pointer;">完成 / Done</button>
-    </div>
-
-    <!-- 设置面板遮罩 -->
-    <div id="text-settings-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1999;" onclick="toggleTextSettings()"></div>
 
     <script src="/static/vad/ort.js"></script>
     <script src="/static/vad/my_vad.js"></script>
