@@ -62,10 +62,10 @@
            2. 仪表盘
            ========================================= */
         #section-dashboard { display: flex; flex-direction: column; height: 100%; width: 100%; }
-        .main-body { display: flex; flex: 1; gap: 15px; overflow: hidden; padding: 20px; flex-wrap: wrap; }
+        .main-body { display: flex; flex: 1; gap: 15px; overflow: hidden; padding: 20px; flex-wrap: wrap; align-items: flex-start; }
 
         /* 四列布局：语言/音频/术语/显示 - 比例 25/25/25/25 */
-        .col-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 15px; display: flex; flex-direction: column; }
+        .col-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 15px; display: flex; flex-direction: column; max-height: 100%; overflow-y: auto; }
         #card-lang { flex: 0 0 calc(25% - 11px); min-width: 200px; }
         #card-audio { flex: 0 0 calc(25% - 12px); min-width: 200px; }
         #card-glossary { flex: 0 0 calc(25% - 12px); min-width: 200px; }
@@ -572,7 +572,7 @@
                     </select>
                 </div>
 
-                <div style="display:flex; gap:8px; margin-top:auto;">
+                <div style="display:flex; gap:8px; margin-top:15px;">
                     <button class="btn-nav" onclick="resetDisplaySettings()" style="flex:1; font-size:10px;">重置默认 / Reset</button>
                     <button class="btn-nav" onclick="previewDisplaySettings()" style="flex:1; font-size:10px;">预览 / Preview</button>
                 </div>
