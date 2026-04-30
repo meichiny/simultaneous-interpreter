@@ -612,48 +612,36 @@
         if (voiceHint) voiceHint.style.display = enabled ? 'block' : 'none';
     };
 
-// --- 音频帮助和虚拟声卡状态 ---
+    // --- 音频帮助和虚拟声卡状态 ---
 
-window.toggleAudioHelp = function() {
-    const helpContent = document.getElementById('audio-help-content');
-    if (helpContent) {
-        helpContent.style.display = helpContent.style.display === 'none' ? 'block' : 'none';
-    }
-};
+    window.toggleAudioHelp = function() {
+        const helpContent = document.getElementById('audio-help-content');
+        if (helpContent) {
+            helpContent.style.display = helpContent.style.display === 'none' ? 'block' : 'none';
+        }
+    };
 
-function updateCableStatus() {
-    // 检测 Cable A 和 Cable B 是否在设备列表中
-    const micSelect = document.getElementById('dev-real-mic');
-    const spkSelect = document.getElementById('dev-real-spk');
-    
-    const cableAStatus = document.getElementById('cable-a-status');
-    const cableBStatus = document.getElementById('cable-b-status');
-    
-    if (!cableAStatus || !cableBStatus) return;
-    
-    const hasCableA = Array.from(micSelect?.options || []).some(opt => 
-        opt.text.toLowerCase().includes('cable a') || opt.text.toLowerCase().includes('cable-a')
-    );
-    const hasCableB = Array.from(spkSelect?.options || []).some(opt => 
-        opt.text.toLowerCase().includes('cable b') || opt.text.toLowerCase().includes('cable-b')
-    );
-    
-    if (hasCableA) {
-        cableAStatus.textContent = '✓ 已检测到';
-        cableAStatus.style.color = '#10b981';
-    } else {
-        cableAStatus.textContent = '✗ 未检测到';
-        cableAStatus.style.color = '#ef4444';
+    function updateStatusIndicator(element, isDetected) {
+        if (!element) return;
+        element.textContent = isDetected ? '✓ 已检测到' : '✗ 未检测到';
+        element.style.color = isDetected ? 'var(--status-green)' : 'var(--status-red)';
     }
-    
-    if (hasCableB) {
-        cableBStatus.textContent = '✓ 已检测到';
-        cableBStatus.style.color = '#10b981';
-    } else {
-        cableBStatus.textContent = '✗ 未检测到';
-        cableBStatus.style.color = '#ef4444';
+
+    function updateCableStatus() {
+        const cableAStatus = document.getElementById('cable-a-status');
+        const cableBStatus = document.getElementById('cable-b-status');
+
+        if (!cableAStatus || !cableBStatus) return;
+
+        const micSelect = document.getElementById('dev-real-mic');
+        const spkSelect = document.getElementById('dev-real-spk');
+
+        const hasCableA = Array.from(micSelect?.options || []).some(opt => isCableA(opt.text));
+        const hasCableB = Array.from(spkSelect?.options || []).some(opt => isCableB(opt.text));
+
+        updateStatusIndicator(cableAStatus, hasCableA);
+        updateStatusIndicator(cableBStatus, hasCableB);
     }
-}
 
 
     // 初始化配置 UI
