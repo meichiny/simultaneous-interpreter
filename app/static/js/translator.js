@@ -606,6 +606,10 @@
             const parent = el?.closest('.form-group');
             if (parent) parent.style.display = enabled ? 'block' : 'none';
         });
+
+        // 显示/隐藏音色设置说明文字
+        const voiceHint = document.getElementById('voice-hint');
+        if (voiceHint) voiceHint.style.display = enabled ? 'block' : 'none';
     };
 
 // --- 音频帮助和虚拟声卡状态 ---
