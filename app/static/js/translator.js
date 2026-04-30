@@ -424,14 +424,20 @@
     window.resetDisplaySettings = function() {
         Storage.remove('displayTextSettings');
         document.getElementById('display-font-size').value = defaultDisplaySettings.fontSize;
-        document.getElementById('display-size-value').textContent = defaultDisplaySettings.fontSize;
+        const sizeValueEl = document.getElementById('display-size-value');
+        if (sizeValueEl) sizeValueEl.textContent = defaultDisplaySettings.fontSize;
         document.getElementById('display-line-height').value = defaultDisplaySettings.lineHeight;
-        document.getElementById('display-lh-value').textContent = defaultDisplaySettings.lineHeight;
+        const lhValueEl = document.getElementById('display-lh-value');
+        if (lhValueEl) lhValueEl.textContent = defaultDisplaySettings.lineHeight;
         document.getElementById('display-trans-color').value = defaultDisplaySettings.transColor;
         document.getElementById('display-orig-color').value = defaultDisplaySettings.origColor;
         document.getElementById('display-bg-color').value = defaultDisplaySettings.bgColor;
         document.getElementById('display-bg-opacity').value = defaultDisplaySettings.bgOpacity;
-        document.getElementById('display-opacity-value').textContent = defaultDisplaySettings.bgOpacity;
+        const opacityValueEl = document.getElementById('display-opacity-value');
+        if (opacityValueEl) opacityValueEl.textContent = defaultDisplaySettings.bgOpacity;
+        
+        // 立即应用默认设置到界面
+        applyDisplaySettingsToEmbedded();
     };
 
     // 统一的 URL 参数构建函数
@@ -1077,6 +1083,10 @@
         const paneOrig = document.getElementById(`pane-orig-${prefix}`);
         const isTranslated = data.type === 'translated';
         const isOriginal = data.type === 'original';
+        
+        // Debug logging
+        console.log(`[updateText] prefix=${prefix}, type=${data.type}, isTranslated=${isTranslated}, isOriginal=${isOriginal}, text=${data.text?.substring(0, 20)}`);
+        
         let targetPane, targetPending;
         if (prefix === 'speak') {
             // speak面板：原文(我说的)→下方，译文(对方听的)→上方
@@ -1087,6 +1097,9 @@
             targetPane = isTranslated ? paneOrig : paneTrans;
             targetPending = isTranslated ? pendingOrig : pendingTrans;
         }
+        
+        // Debug target elements
+        console.log(`[updateText] targetPane=${targetPane?.id}, targetPending=${targetPending?.id}`);
         if (data.isFinal) {
             if (data.text && targetPane) {
                 const span = document.createElement('span'); span.className = 'sentence-final';
