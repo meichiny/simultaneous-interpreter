@@ -536,39 +536,12 @@
 
                 <div class="form-group">
                     <label class="form-label">字号 / Font Size (px)</label>
-                    <div style="display:flex; gap:8px;">
-                        <select id="display-font-size-select" style="flex:1;" onchange="document.getElementById('display-font-size').value=this.value; updateDisplaySetting('fontSize', this.value)">
-                            <option value="10">10px</option>
-                            <option value="12">12px</option>
-                            <option value="13" selected>13px</option>
-                            <option value="14">14px</option>
-                            <option value="16">16px</option>
-                            <option value="18">18px</option>
-                            <option value="20">20px</option>
-                            <option value="24">24px</option>
-                            <option value="28">28px</option>
-                            <option value="32">32px</option>
-                        </select>
-                        <input type="number" id="display-font-size" value="13" min="10" max="72" style="width:70px;" onchange="updateDisplaySetting('fontSize', this.value)">
-                    </div>
+                    <input type="number" id="display-font-size" value="13" min="10" max="72" style="width:100%;" onchange="updateDisplaySetting('fontSize', this.value)" title="常用值：12, 14, 16, 18, 20">
                 </div>
 
                 <div class="form-group">
                     <label class="form-label">行高 / Line Height</label>
-                    <div style="display:flex; gap:8px;">
-                        <select id="display-line-height-select" style="flex:1;" onchange="document.getElementById('display-line-height').value=this.value; updateDisplaySetting('lineHeight', this.value)">
-                            <option value="1.0">1.0</option>
-                            <option value="1.2">1.2</option>
-                            <option value="1.4">1.4</option>
-                            <option value="1.5" selected>1.5</option>
-                            <option value="1.6">1.6</option>
-                            <option value="1.8">1.8</option>
-                            <option value="2.0">2.0</option>
-                            <option value="2.5">2.5</option>
-                            <option value="3.0">3.0</option>
-                        </select>
-                        <input type="number" id="display-line-height" value="1.5" min="1" max="3" step="0.1" style="width:70px;" onchange="updateDisplaySetting('lineHeight', this.value)">
-                    </div>
+                    <input type="number" id="display-line-height" value="1.5" min="1" max="3" step="0.1" style="width:100%;" onchange="updateDisplaySetting('lineHeight', this.value)" title="常用值：1.2, 1.4, 1.5, 1.6, 2.0">
                 </div>
 
                 <div class="form-group">

@@ -393,21 +393,14 @@
     // 从 localStorage 加载显示设置
     function loadDisplaySettings() {
         const settings = Storage.get('displayTextSettings', {});
-        const fontSize = settings.fontSize || defaultDisplaySettings.fontSize;
-        const lineHeight = settings.lineHeight || defaultDisplaySettings.lineHeight;
-        const bgOpacity = settings.bgOpacity || defaultDisplaySettings.bgOpacity;
 
-        // 字号 - 同步下拉框和输入框
+        // 字号
         const fontSizeInput = document.getElementById('display-font-size');
-        const fontSizeSelect = document.getElementById('display-font-size-select');
-        if (fontSizeInput) fontSizeInput.value = fontSize;
-        if (fontSizeSelect) fontSizeSelect.value = fontSize;
+        if (fontSizeInput) fontSizeInput.value = settings.fontSize || defaultDisplaySettings.fontSize;
 
-        // 行高 - 同步下拉框和输入框
+        // 行高
         const lineHeightInput = document.getElementById('display-line-height');
-        const lineHeightSelect = document.getElementById('display-line-height-select');
-        if (lineHeightInput) lineHeightInput.value = lineHeight;
-        if (lineHeightSelect) lineHeightSelect.value = lineHeight;
+        if (lineHeightInput) lineHeightInput.value = settings.lineHeight || defaultDisplaySettings.lineHeight;
 
         // 颜色
         document.getElementById('display-trans-color').value = settings.transColor || defaultDisplaySettings.transColor;
@@ -415,23 +408,10 @@
         document.getElementById('display-bg-color').value = settings.bgColor || defaultDisplaySettings.bgColor;
 
         // 透明度
-        document.getElementById('display-bg-opacity').value = bgOpacity;
+        document.getElementById('display-bg-opacity').value = settings.bgOpacity || defaultDisplaySettings.bgOpacity;
     }
 
     window.updateDisplaySetting = function(key, value) {
-        // 同步下拉框和输入框
-        if (key === 'fontSize') {
-            const select = document.getElementById('display-font-size-select');
-            const input = document.getElementById('display-font-size');
-            if (select) select.value = value;
-            if (input) input.value = value;
-        } else if (key === 'lineHeight') {
-            const select = document.getElementById('display-line-height-select');
-            const input = document.getElementById('display-line-height');
-            if (select) select.value = value;
-            if (input) input.value = value;
-        }
-
         // 保存到 localStorage
         const settings = Storage.get('displayTextSettings', {});
         settings[key] = value;
