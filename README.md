@@ -4,9 +4,33 @@
 
 ---
 
+## 关于本项目
+
+本项目 fork 自 [masichong408/simultaneous-interpreter](https://github.com/masichong408/simultaneous-interpreter)，在保留原项目核心功能的基础上，进行了大量定制开发和优化改进。如需了解原项目，请访问上游仓库。
+
+---
+
 ## 中文
 
 基于火山引擎同声传译 API 的实时翻译工具，支持双通道会议翻译、术语管理和会议记录。
+
+### 相较于原项目的改进
+
+#### 新增功能
+
+- **配置页面显示设置**：在配置页面可直接预设字体大小、行高、文字颜色、背景颜色、背景透明度，无需打开显示窗口后再调整
+- **TTS 语音输出开关**：可单独关闭语音输出，仅保留文字翻译（节省 API 费用）
+- **单/双通道模式切换**：单通道模式无需虚拟声卡，降低使用门槛
+- **实时日志侧边栏**：运行时可查看 INFO/WARNING/ERROR 级别日志，支持打开完整日志页面（搜索、过滤、导出）
+- **Token 计费显示**：实时显示 API 调用消耗的 token 数
+- **虚拟声卡检测状态**：双通道模式下显示 Cable A/B 检测状态
+
+#### 优化改进
+
+- **移除强制引导弹窗**：原项目每次重启后强制显示音频路由设置弹窗，现已移除并整合到配置页面
+- **四列布局优化**：配置页面改为语言/音频/术语/显示四列布局，避免内容溢出
+- **列高独立适应**：各配置列高度独立变化，可单独滚动
+- **代码重构**：提取工具函数、使用 CSS 类管理状态、消除重复代码
 
 ### 功能
 
@@ -180,6 +204,24 @@ MIT License
 ## English
 
 A real-time translation tool built on the Volcano Engine Simultaneous Translation API, supporting dual-channel meeting translation, glossary management, and meeting transcription.
+
+### Improvements Over Original Project
+
+#### New Features
+
+- **Display Settings in Config Panel**: Preset font size, line height, text color, background color, and opacity directly in the configuration page
+- **TTS Output Toggle**: Enable/disable voice output independently to save API costs
+- **Single/Dual Channel Mode**: Single-channel mode requires no virtual audio cable
+- **Real-time Log Sidebar**: View INFO/WARNING/ERROR logs during operation, with full log page (search, filter, export)
+- **Token Billing Display**: Real-time display of API token consumption
+- **Virtual Cable Detection Status**: Shows Cable A/B detection status in dual-channel mode
+
+#### Improvements
+
+- **Removed Mandatory Guide Popup**: Audio routing guide integrated into config page instead of showing on every restart
+- **Four-Column Layout**: Config page uses language/audio/glossary/display columns to prevent overflow
+- **Independent Column Heights**: Each column scrolls independently
+- **Code Refactoring**: Extracted utility functions, use CSS classes for state management, eliminated duplicate code
 
 ### Features
 
