@@ -78,7 +78,7 @@
         .cable-status { margin-top: 8px; padding-top: 8px; border-top: 1px solid #444; }
         .cable-status-row { display: flex; justify-content: space-between; margin-bottom: 3px; }
         .audio-help-toggle { background: none; border: none; color: var(--accent); font-size: 10px; cursor: pointer; padding: 0; }
-        .audio-help-content { display: none; margin-top: 8px; padding: 8px; background: var(--bg-input); border-radius: 4px; font-size: 10px; line-height: 1.6; }
+        .audio-help-content { margin-top: 8px; padding: 8px; background: var(--bg-input); border-radius: 4px; font-size: 10px; line-height: 1.6; }
 
         /* 响应式断点 */
         @media (max-width: 1439px) {
@@ -504,7 +504,7 @@
                         <button class="audio-help-toggle" onclick="toggleAudioHelp()">
                             ▼ 查看设置说明 / Setup Guide
                         </button>
-                        <div id="audio-help-content" class="audio-help-content">
+                        <div id="audio-help-content" class="audio-help-content hidden">
                             <div class="text-white mb-1">请前往 腾讯会议/Zoom/飞书/Teams 设置音频:</div>
                             1. 扬声器 / Speaker → <span class="text-accent">Cable B</span> (声音流入AI)<br>
                             2. 麦克风 / Mic → <span class="text-accent">Cable A</span> (翻译传给对方)<br>
