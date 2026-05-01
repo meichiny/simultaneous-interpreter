@@ -46,6 +46,42 @@
 - **断线自动恢复**：网络中断后自动重连并恢复翻译会话
 - **配置向导**：首次使用时引导完成音频路由配置
 
+### 界面预览
+
+#### 配置页面
+
+![单通道配置](docs/images/config-single.png)
+*单通道模式：无需虚拟声卡，适合个人使用*
+
+![双通道配置](docs/images/config-dual.png)
+*双通道模式：显示虚拟声卡检测状态和帮助说明*
+
+#### 运行界面
+
+![运行中](docs/images/running.png)
+*运行中：实时显示译文和原文*
+
+![投影屏](docs/images/display.png)
+*投影屏：独立窗口展示，支持自定义样式*
+
+#### 日志功能
+
+![实时日志](docs/images/logs.png)
+*实时日志侧边栏：查看 INFO/WARNING/ERROR 级别日志*
+
+![完整日志](docs/images/full-logs.png)
+*完整日志页面：支持搜索、过滤、导出*
+
+#### 功能页面
+
+![术语管理](docs/images/glossary.png)
+*术语管理：支持分类管理、CSV 导入导出*
+
+![会议记录](docs/images/meetings.png)
+*会议记录：自动保存双语转写，支持导出*
+
+---
+
 ### 快速开始
 
 #### 1. 环境要求
@@ -234,6 +270,12 @@ A real-time translation tool built on the Volcano Engine Simultaneous Translatio
 - **Meeting Transcription**: Automatically saves bilingual transcription records, exportable in TXT/MD format
 - **Auto-reconnection**: Automatically reconnects and resumes the translation session after network interruptions
 - **Setup Wizard**: Guided audio routing configuration on first use
+
+### Screenshots
+
+See [Chinese section](#界面预览) for screenshots.
+
+---
 
 ### Quick Start
 
