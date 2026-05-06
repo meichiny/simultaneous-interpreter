@@ -110,23 +110,31 @@ pip install -r requirements.txt
 
 **第二步：开通豆包同声传译 2.0 大模型服务**
 
-1. 进入 [语音技术控制台](https://console.volcengine.com/speech/app)
-2. 在左侧导航栏点击「服务列表」，找到「**豆包同声传译 2.0 大模型**」并开通（有免费试用额度）
+1. 进入 [豆包语音控制台](https://console.volcengine.com/speech/app)
+2. 在左侧导航栏的「api服务中心」或「开通管理」，找到「**豆包同声传译 2.0 大模型**」并开通（有免费试用额度）
 3. 注意：请选择「豆包同声传译 2.0 大模型」，不要选旧版同声传译服务
 
 **第三步：创建应用，获取 App Key**
 
-1. 在语音技术控制台，点击「应用管理」→「创建应用」
-2. 填写应用名称，在「接入能力」中勾选「豆包同声传译 2.0 大模型」
-3. 创建完成后，在应用列表中查看 **App Key**（即 `VOLCANO_APP_KEY`）
+- 旧版控制台
+  
+  1. 点击「应用管理」→「创建应用」
+  2. 填写应用名称，在「接入能力」中勾选「豆包同声传译 2.0 大模型」
+  3. 创建完成后，在应用列表中查看 **App ID**（即 `VOLCANO_APP_KEY`）
+
+- 新版控制台
+  
+  1. 在左侧导航栏点击「API key管理」
+  2. 在 api key 管理列表查看 **Api Key**（即 `VOLCANO_APP_KEY`）
 
 **第四步：获取 Access Key**
 
-1. 点击控制台右上角头像 →「API 访问密钥」，或直接访问 [密钥管理页面](https://console.volcengine.com/iam/keymanage/)
-2. 点击「新建密钥」，创建后记录 **Access Key ID**（即 `VOLCANO_ACCESS_KEY`）和 **Secret Access Key**
-3. Secret Access Key 只在创建时显示一次，请妥善保存
+- 旧版控制台
+  
+  1. 在左侧导航栏的「api服务中心」，点击「豆包同声传译2.0大模型」
+  2. 在「服务接口认证信息」区域，点击查看 **Access Token** （即 `VOLCANO_ACCESS_KEY`）
 
-> 如果遇到权限问题，前往「访问控制」→「用户管理」→「关联策略」，添加 `SAMIFullAccess` 权限。
+（新版控制台API接入使用API Key，无需 access key，旧版本使用APP ID 和 access token）
 
 **第五步：配置到项目中**
 
@@ -136,9 +144,15 @@ cp .env.example .env
 
 编辑 `.env` 文件，填入获取的密钥：
 
+新旧控制台的密钥信息二选一，无需都填写。
+
 ```
-VOLCANO_APP_KEY=your_app_key
-VOLCANO_ACCESS_KEY=your_access_key
+# 适用新版控制台
+VOLCANO_APP_KEY=your_api_key
+
+# 适用旧版控制台
+VOLCANO_APP_KEY=your_app_id
+VOLCANO_ACCESS_KEY=your_access_token
 ```
 
 #### 4. 启动
@@ -305,23 +319,31 @@ This project requires two keys: `VOLCANO_APP_KEY` (application key) and `VOLCANO
 
 **Step 2: Enable the Doubao Simultaneous Translation 2.0 Model Service**
 
-1. Go to the [Speech Technology Console](https://console.volcengine.com/speech/app)
-2. Click "Service List" in the left sidebar, find "**Doubao Simultaneous Translation 2.0 Model**" and enable it (free trial quota available)
+1. Go to the [Doubao Speech Console](https://console.volcengine.com/speech/app)
+2. In the left sidebar, find "API Service Center" or "Service Activation", locate "**Doubao Simultaneous Translation 2.0 Model**" and enable it (free trial quota available)
 3. Note: Make sure to select "Doubao Simultaneous Translation 2.0 Model", not the legacy translation service
 
 **Step 3: Create an Application and Get the App Key**
 
-1. In the Speech Technology Console, click "Application Management" → "Create Application"
-2. Enter an application name and check "Doubao Simultaneous Translation 2.0 Model" under "Access Capabilities"
-3. After creation, find the **App Key** in the application list (this is your `VOLCANO_APP_KEY`)
+- **Legacy Console**
+
+  1. Click "Application Management" → "Create Application"
+  2. Enter an application name and check "Doubao Simultaneous Translation 2.0 Model" under "Access Capabilities"
+  3. After creation, find the **App ID** in the application list (this is your `VOLCANO_APP_KEY`)
+
+- **New Console**
+
+  1. Click "API Key Management" in the left sidebar
+  2. View the **Api Key** in the API key management list (this is your `VOLCANO_APP_KEY`)
 
 **Step 4: Get the Access Key**
 
-1. Click your avatar in the top right corner → "API Access Key", or visit the [Key Management page](https://console.volcengine.com/iam/keymanage/) directly
-2. Click "Create Key" and record the **Access Key ID** (this is your `VOLCANO_ACCESS_KEY`) and **Secret Access Key**
-3. The Secret Access Key is only shown once at creation time — save it securely
+- **Legacy Console**
 
-> If you encounter permission issues, go to "Access Control" → "User Management" → "Associate Policy" and add the `SAMIFullAccess` policy.
+  1. In the left sidebar, go to "API Service Center" and click "Doubao Simultaneous Translation 2.0 Model"
+  2. In the "Service Interface Authentication Information" section, click to view the **Access Token** (this is your `VOLCANO_ACCESS_KEY`)
+
+(The new console uses API Key for API access, no access key required. The legacy version uses APP ID and access token.)
 
 **Step 5: Configure the Project**
 
@@ -331,9 +353,15 @@ cp .env.example .env
 
 Edit the `.env` file and enter your keys:
 
+Choose one of the following configurations based on your console version:
+
 ```
-VOLCANO_APP_KEY=your_app_key
-VOLCANO_ACCESS_KEY=your_access_key
+# For new console
+VOLCANO_APP_KEY=your_api_key
+
+# For legacy console
+VOLCANO_APP_KEY=your_app_id
+VOLCANO_ACCESS_KEY=your_access_token
 ```
 
 #### 4. Start
