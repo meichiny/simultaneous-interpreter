@@ -41,7 +41,7 @@
 - **TTS 语音输出（可开关）**：翻译结果可选通过 PCM 流式播放，支持预设音色和声音克隆
 - **独立显示窗口**：翻译结果可在独立窗口展示，支持自定义字体大小、颜色、背景
 - **音频美化**：低通滤波 + 高频衰减 + 动态压缩，输出更自然柔和
-- **术语管理**：支持分类管理、CSV 导入导出、会议中临时添加术语并热更新
+- **术语管理**：支持分类管理、CSV 导入导出、会议中临时添加术语并热更新，支持批量删除/移动术语，支持术语冲突检查与统一
 - **会议记录**：自动保存双语转写记录，支持 TXT/MD 格式导出
 - **断线自动恢复**：网络中断后自动重连并恢复翻译会话
 - **配置向导**：首次使用时引导完成音频路由配置
@@ -280,7 +280,7 @@ A real-time translation tool built on the Volcano Engine Simultaneous Translatio
 - **Single-channel Mode**: No virtual audio cable needed — translates microphone input only (great for a quick start)
 - **TTS Voice Output**: Translation results are played back via PCM streaming, with support for preset voices and voice cloning
 - **Audio Enhancement**: Low-pass filter + high-frequency attenuation + dynamic compression for smoother, more natural output
-- **Glossary Management**: Categorized glossary management, CSV import/export, and on-the-fly term addition with hot-reload during meetings
+- **Glossary Management**: Categorized glossary management, CSV import/export, on-the-fly term addition with hot-reload during meetings, bulk delete/move terms, conflict detection and unification
 - **Meeting Transcription**: Automatically saves bilingual transcription records, exportable in TXT/MD format
 - **Auto-reconnection**: Automatically reconnects and resumes the translation session after network interruptions
 - **Setup Wizard**: Guided audio routing configuration on first use
