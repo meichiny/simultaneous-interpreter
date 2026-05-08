@@ -126,6 +126,30 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('delete-selected-btn').style.display = n > 0 ? 'block' : 'none';
     };
 
+    // 批量删除所选术语
+    document.getElementById('delete-selected-btn').onclick = async () => {
+        const checked = document.querySelectorAll('.term-check:checked');
+        const ids = Array.from(checked).map(cb => parseInt(cb.dataset.id));
+        if (ids.length === 0) return;
+        if (!confirm(`确定删除选中的 ${ids.length} 个术语吗？`)) return;
+        try {
+            const res = await fetch(appendQuery('/api/glossary/terms/delete_bulk'), {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({term_ids: ids})
+            });
+            if (res.ok) {
+                loadTerms(curCatId);
+                editorEl.innerHTML = '<div class="placeholder">已删除所选术语</div>';
+            } else {
+                alert('删除失败，请重试');
+            }
+        } catch (e) {
+            console.error(e);
+            alert('删除失败，请重试');
+        }
+    };
+
     // 3. 编辑器
     window.editTerm = (id, el) => {
         document.querySelectorAll('.term-item').forEach(e => e.classList.remove('selected'));
@@ -230,7 +254,7 @@ document.addEventListener('DOMContentLoaded', () => {
         box.innerHTML = list.length ? list.map((c, i) => `
             <div style="margin-bottom:15px; border-bottom:1px dashed var(--border); padding-bottom:10px;">
                 <div style="font-weight:bold; color:var(--text-main); margin-bottom:5px;">${c.source}</div>
-                ${c.translations.map((t, ti) => `
+                ${c.targets.map((t, ti) => `
                     <label style="display:block; margin-bottom:3px; color:var(--text-sub); cursor:pointer;">
                         <input type="radio" name="cf-${i}" value="${t}" ${ti===0?'checked':''}> ${t}
                     </label>
@@ -238,6 +262,51 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `).join('') : '<div style="text-align:center; padding:20px; color:var(--text-sub);">暂无冲突</div>';
         document.getElementById('conflict-modal').style.display = 'flex';
+    };
+
+    // 统一所选冲突术语
+    document.getElementById('confirm-unification-btn').onclick = async () => {
+        // 判断是否显示 "暂无冲突"
+        const box = document.getElementById('conflict-list');
+        if (box.innerHTML.includes('暂无冲突')) {
+            document.getElementById('conflict-modal').style.display = 'none';
+            return;
+        }
+
+        // 收集每个冲突组中用户选择的译文
+        const conflictBoxes = box.querySelectorAll('div[style*="margin-bottom:15px"]');
+        let successCount = 0;
+        let failCount = 0;
+
+        for (const cb of conflictBoxes) {
+            const sourceDiv = cb.querySelector('div[style*="font-weight:bold"]');
+            if (!sourceDiv) continue;
+            const source = sourceDiv.innerText.trim();
+
+            const checkedRadio = cb.querySelector('input[type="radio"]:checked');
+            if (!checkedRadio) continue;
+            const target = checkedRadio.value;
+
+            try {
+                const res = await fetch(appendQuery('/api/glossary/terms/unify'), {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({source: source, target: target})
+                });
+                if (res.ok) {
+                    successCount++;
+                } else {
+                    failCount++;
+                }
+            } catch (e) {
+                console.error(e);
+                failCount++;
+            }
+        }
+
+        document.getElementById('conflict-modal').style.display = 'none';
+        alert(`统一完成：${successCount} 组术语已统一${failCount > 0 ? `，${failCount} 组失败` : ''}`);
+        loadTerms(curCatId);
     };
 
     loadCats();
