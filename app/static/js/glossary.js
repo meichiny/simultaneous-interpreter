@@ -90,7 +90,9 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('.cat-item').forEach(e => e.classList.remove('selected'));
         el.classList.add('selected');
         document.getElementById('add-term-btn').style.display = isPub ? 'none' : 'block';
+        // 重置批量操作按钮状态
         document.getElementById('delete-selected-btn').style.display = 'none';
+        document.getElementById('move-selected-btn').style.display = 'none';
         await loadTerms(id);
         editorEl.innerHTML = '<div class="placeholder">请选择术语进行编辑</div>';
     };
@@ -123,7 +125,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     window.updateBulkBtn = () => {
         const n = document.querySelectorAll('.term-check:checked').length;
-        document.getElementById('delete-selected-btn').style.display = n > 0 ? 'block' : 'none';
+        const display = n > 0 ? 'block' : 'none';
+        document.getElementById('delete-selected-btn').style.display = display;
+        document.getElementById('move-selected-btn').style.display = display;
     };
 
     // 批量删除所选术语
@@ -139,6 +143,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify({term_ids: ids})
             });
             if (res.ok) {
+                // 重置批量操作按钮状态
+                document.getElementById('delete-selected-btn').style.display = 'none';
+                document.getElementById('move-selected-btn').style.display = 'none';
                 loadTerms(curCatId);
                 editorEl.innerHTML = '<div class="placeholder">已删除所选术语</div>';
             } else {
@@ -147,6 +154,69 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (e) {
             console.error(e);
             alert('删除失败，请重试');
+        }
+    };
+
+    // 批量移动所选术语
+    document.getElementById('move-selected-btn').onclick = () => {
+        const checked = document.querySelectorAll('.term-check:checked');
+        const ids = Array.from(checked).map(cb => cb.dataset.id);
+        if (ids.length === 0) return;
+
+        // 显示选中的术语数量
+        document.getElementById('move-term-count').textContent = `已选择 ${ids.length} 个术语`;
+
+        // 填充目标分类下拉框（排除当前分类）
+        const select = document.getElementById('move-target-category');
+        const myCats = allCats.filter(c => !c.is_public && c.id !== curCatId);
+
+        if (myCats.length === 0) {
+            alert('没有其他可移动的分类');
+            return;
+        }
+
+        select.innerHTML = myCats.map(c =>
+            `<option value="${c.id}">${c.name}</option>`
+        ).join('');
+
+        // 保存当前选中的术语ID到按钮，方便后续使用
+        document.getElementById('confirm-move-btn').dataset.termIds = JSON.stringify(ids);
+
+        // 显示弹窗
+        document.getElementById('move-modal').style.display = 'flex';
+    };
+
+    // 确认移动术语
+    document.getElementById('confirm-move-btn').onclick = async () => {
+        const targetCatId = parseInt(document.getElementById('move-target-category').value);
+        const termIds = JSON.parse(document.getElementById('confirm-move-btn').dataset.termIds);
+
+        if (!targetCatId || !termIds || termIds.length === 0) return;
+
+        try {
+            const res = await fetch(appendQuery('/api/glossary/terms/move'), {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    term_ids: termIds,
+                    target_category_id: targetCatId
+                })
+            });
+
+            if (res.ok) {
+                document.getElementById('move-modal').style.display = 'none';
+                // 重置批量操作按钮状态
+                document.getElementById('delete-selected-btn').style.display = 'none';
+                document.getElementById('move-selected-btn').style.display = 'none';
+                loadTerms(curCatId);
+                editorEl.innerHTML = '<div class="placeholder">术语已移动</div>';
+            } else {
+                const err = await res.json();
+                alert('移动失败: ' + (err.error || '请重试'));
+            }
+        } catch (e) {
+            console.error(e);
+            alert('移动失败，请重试');
         }
     };
 
