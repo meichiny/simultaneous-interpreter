@@ -229,7 +229,10 @@
             <div class="form-group">
                 <label class="form-label">选择 CSV 文件</label>
                 <input type="file" id="import-file-input" accept=".csv" class="form-input" style="padding:8px;">
-                <p style="color:var(--text-sub); font-size:12px; margin-top:5px;">格式要求：原文, 译文, 备注(可选)</p>
+                <p style="color:var(--text-sub); font-size:12px; margin-top:5px;">
+                格式要求：原文, 译文, 备注(可选)
+                · <a href="{{ url_for('static', filename='glossary_template.csv') }}" download style="color:var(--accent);">下载导入模板</a>
+            </p>
             </div>
             <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
                 <button class="btn-nav" onclick="document.getElementById('import-modal').style.display='none'">取消</button>
