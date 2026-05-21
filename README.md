@@ -101,7 +101,7 @@ pip install -r requirements.txt
 
 #### 3. 申请火山引擎 API 密钥
 
-本项目需要两个密钥：`VOLCANO_APP_KEY`（应用密钥）和 `VOLCANO_ACCESS_KEY`（账号访问密钥），按以下步骤获取：
+本项目需要 `VOLCANO_APP_KEY`（API 密钥或 App ID），旧版控制台还需 `VOLCANO_ACCESS_KEY`（Access Token），按以下步骤获取：
 
 **第一步：注册并实名认证**
 
@@ -147,12 +147,12 @@ cp .env.example .env
 新旧控制台的密钥信息二选一，无需都填写。
 
 ```
-# 适用新版控制台
+# 新版控制台（仅需 API Key）
 VOLCANO_APP_KEY=your_api_key
 
-# 适用旧版控制台
-VOLCANO_APP_KEY=your_app_id
-VOLCANO_ACCESS_KEY=your_access_token
+# 旧版控制台（需 App ID + Access Token）
+# VOLCANO_APP_KEY=your_app_id
+# VOLCANO_ACCESS_KEY=your_access_token
 ```
 
 #### 4. 启动
@@ -320,7 +320,7 @@ pip install -r requirements.txt
 
 #### 3. Apply for Volcano Engine API Keys
 
-This project requires two keys: `VOLCANO_APP_KEY` (application key) and `VOLCANO_ACCESS_KEY` (account access key). Follow these steps:
+This project requires `VOLCANO_APP_KEY` (API key or App ID). Legacy console additionally requires `VOLCANO_ACCESS_KEY` (access token). Follow these steps:
 
 **Step 1: Register and Complete Identity Verification**
 
@@ -366,12 +366,12 @@ Edit the `.env` file and enter your keys:
 Choose one of the following configurations based on your console version:
 
 ```
-# For new console
+# For new console (API Key only)
 VOLCANO_APP_KEY=your_api_key
 
-# For legacy console
-VOLCANO_APP_KEY=your_app_id
-VOLCANO_ACCESS_KEY=your_access_token
+# For legacy console (App ID + Access Token)
+# VOLCANO_APP_KEY=your_app_id
+# VOLCANO_ACCESS_KEY=your_access_token
 ```
 
 #### 4. Start
