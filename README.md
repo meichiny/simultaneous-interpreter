@@ -202,6 +202,16 @@ python wsgi.py
 - 设置自动保存，下次打开保持原样
 - 适合投屏展示或辅助阅读
 
+### 常见问题
+
+#### Q：点击开始运行后显示"连接AI服务失败：python-socks is required to use a socks proxy"
+
+A：电脑上开启了网络代理工具（如 Clash、Surge、Shadowsocks 等）导致。`websockets` 库检测到系统 SOCKS 代理设置，但缺少代理依赖包。
+
+**解决方法：**
+1. 关闭代理工具的系统代理功能，或退出代理软件，然后刷新页面重新运行
+2. 或在代理工具的「绕过」列表中添加 `openspeech.bytedance.com`
+
 ### 技术架构
 
 ```
@@ -326,20 +336,20 @@ This project requires two keys: `VOLCANO_APP_KEY` (application key) and `VOLCANO
 **Step 3: Create an Application and Get the App Key**
 
 - **Legacy Console**
-
+  
   1. Click "Application Management" → "Create Application"
   2. Enter an application name and check "Doubao Simultaneous Translation 2.0 Model" under "Access Capabilities"
   3. After creation, find the **App ID** in the application list (this is your `VOLCANO_APP_KEY`)
 
 - **New Console**
-
+  
   1. Click "API Key Management" in the left sidebar
   2. View the **Api Key** in the API key management list (this is your `VOLCANO_APP_KEY`)
 
 **Step 4: Get the Access Key**
 
 - **Legacy Console**
-
+  
   1. In the left sidebar, go to "API Service Center" and click "Doubao Simultaneous Translation 2.0 Model"
   2. In the "Service Interface Authentication Information" section, click to view the **Access Token** (this is your `VOLCANO_ACCESS_KEY`)
 
@@ -392,6 +402,16 @@ A setup wizard will appear on first use — just follow the steps.
 #### Virtual Audio Cable Installation
 
 - **Windows / macOS**: [VB-Audio Cable A+B](https://vb-audio.com/Cable/) — Download and install as administrator. You need to install both the Cable A and Cable B drivers.
+
+### Troubleshooting
+
+#### Q: "Connection to AI service failed: python-socks is required to use a SOCKS proxy" when clicking Start
+
+A: A proxy tool (Clash, Surge, Shadowsocks, etc.) is running on your machine. The `websockets` library detects the system SOCKS proxy but the `python-socks` dependency is missing.
+
+**Solutions:**
+1. Disable system proxy in your proxy tool, or quit the proxy software, then refresh and retry
+2. Or add `openspeech.bytedance.com` to your proxy tool's bypass list
 
 ### Technical Architecture
 
