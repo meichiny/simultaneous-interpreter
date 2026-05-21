@@ -159,23 +159,6 @@
     let isCalibrating = false;
     let calibrationMaxEnergy = 0;
 
-    // --- 向导 ---
-    window.resetGuide = function() { SessionStorage.remove('guideShown'); location.reload(); };
-
-    window.nextGuide = function(step) {
-        document.querySelectorAll('.spotlight-active').forEach(e => e.classList.remove('spotlight-active'));
-        document.getElementById('guide-modal').style.display = 'none';
-        if (step === 1) document.getElementById('card-lang').classList.add('spotlight-active');
-        if (step === 2) document.getElementById('card-audio').classList.add('spotlight-active');
-        if (step === 3) document.getElementById('card-glossary').classList.add('spotlight-active');
-        if (step === 4) document.getElementById('card-display').classList.add('spotlight-active');
-    };
-
-    window.finishGuide = function() {
-        document.querySelectorAll('.spotlight-active').forEach(e => e.classList.remove('spotlight-active'));
-        document.getElementById('guide-mask').style.display = 'none';
-    };
-
     // --- 状态更新 ---
     function updateStatus(state, text) {
         const color = state === 'error' ? 'var(--status-red)' : state === 'warn' ? 'var(--status-yellow)' : 'var(--status-green)';
