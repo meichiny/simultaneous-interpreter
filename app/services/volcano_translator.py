@@ -36,13 +36,15 @@ async def doubao_translator(socketio, sid, lang_from, lang_to, audio_queue, stop
             'message': message
         }, to=sid)
 
-    if not Config.VOLCANO_APP_KEY or not Config.VOLCANO_ACCESS_KEY:
+    if not Config.VOLCANO_APP_KEY:
         error_msg = "火山引擎API密钥未配置"
         logging.error(f"[{event_prefix}][{sid}] {error_msg}")
         socketio.emit('translation_service_status',
                      {'status': 'error', 'message': error_msg, 'channel': event_prefix},
                      to=sid)
         return
+    if Config.VOLCANO_ACCESS_KEY and not Config.VOLCANO_ACCESS_KEY.strip():
+        emit_log('WARNING', 'VOLCANO_ACCESS_KEY 为空字符串，将使用新版控制台鉴权方式')
 
     session_id = str(uuid.uuid4())
     conn_id = str(uuid.uuid4())
@@ -60,12 +62,21 @@ async def doubao_translator(socketio, sid, lang_from, lang_to, audio_queue, stop
     ws_url = "wss://openspeech.bytedance.com/api/v4/ast/v2/translate"
     resource_id = "volc.service_type.10053"
 
-    headers = {
-        "X-Api-App-Key": Config.VOLCANO_APP_KEY,
-        "X-Api-Access-Key": Config.VOLCANO_ACCESS_KEY,
-        "X-Api-Resource-Id": resource_id,
-        "X-Api-Connect-Id": conn_id
-    }
+    if Config.VOLCANO_ACCESS_KEY:
+        headers = {
+            "X-Api-App-Key": Config.VOLCANO_APP_KEY,
+            "X-Api-Access-Key": Config.VOLCANO_ACCESS_KEY,
+            "X-Api-Resource-Id": resource_id,
+            "X-Api-Connect-Id": conn_id
+        }
+        emit_log('INFO', '使用旧版控制台鉴权方式')
+    else:
+        headers = {
+            "X-Api-Key": Config.VOLCANO_APP_KEY,
+            "X-Api-Resource-Id": resource_id,
+            "X-Api-Connect-Id": conn_id
+        }
+        emit_log('INFO', '使用新版控制台鉴权方式')
 
     socketio.emit('translation_service_status',
                   {'status': 'connecting', 'message': '连接翻译服务...', 'channel': event_prefix},
