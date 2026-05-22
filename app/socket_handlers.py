@@ -10,6 +10,7 @@ from flask_socketio import emit
 from app.models import Term, TermCategory, Meeting
 from app.extensions import db
 from app.services.volcano_translator import doubao_translator
+from app.config import basedir as app_basedir
 
 # 全局会话字典 + 线程锁
 sessions: dict[str, dict] = {}
@@ -360,7 +361,7 @@ def session_manager_task(sid, loop, app, socketio):
             # 保存会议记录
             if meeting_id:
                 try:
-                    meetings_dir = os.path.join(app.root_path, '..', 'meetings')
+                    meetings_dir = os.path.join(app_basedir, 'meetings')
                     os.makedirs(meetings_dir, exist_ok=True)
                     transcript_path_rel = None
 
