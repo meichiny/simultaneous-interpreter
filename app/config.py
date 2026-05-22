@@ -1,9 +1,16 @@
 import os
 from dotenv import load_dotenv
 
-basedir = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
+basedir = os.environ.get('INTERPRETER_BASE_DIR')
+if not basedir:
+    basedir = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
 
-load_dotenv(os.path.join(basedir, '.env'))
+env_path = os.path.join(basedir, '.env')
+if not os.path.exists(env_path):
+    home_env = os.path.join(os.path.expanduser('~'), '.config', 'simultaneous-interpreter', '.env')
+    if os.path.exists(home_env):
+        env_path = home_env
+load_dotenv(env_path)
 
 
 class Config:
@@ -13,7 +20,7 @@ class Config:
         'sqlite:///' + os.path.join(basedir, 'app.db')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
-    UPLOAD_FOLDER = os.path.join(basedir, 'uploads')
+    UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER') or os.path.join(basedir, 'uploads')
     MAX_CONTENT_LENGTH = 100 * 1024 * 1024  # 100MB
 
     VOLCANO_APP_KEY = os.environ.get("VOLCANO_APP_KEY")
