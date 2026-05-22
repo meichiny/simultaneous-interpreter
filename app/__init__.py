@@ -19,10 +19,9 @@ def set_sqlite_pragma(dbapi_connection, connection_record):
     cursor.close()
 
 
-def setup_logging(app):
-    log_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'logs')
-    if not os.path.exists(log_dir):
-        os.mkdir(log_dir)
+def setup_logging(app, base_dir):
+    log_dir = os.path.join(base_dir, 'logs')
+    os.makedirs(log_dir, exist_ok=True)
     file_handler = RotatingFileHandler(
         os.path.join(log_dir, 'translator.log'),
         maxBytes=10485760,
@@ -39,14 +38,17 @@ def setup_logging(app):
     app.logger.info('Translator Open-Source Edition Started')
 
 
-def create_app():
+def create_app(basedir=None):
+    if basedir:
+        os.environ.setdefault('INTERPRETER_BASE_DIR', basedir)
+
     app = Flask(__name__)
     app.config.from_object(Config)
 
-    setup_logging(app)
+    from app.config import basedir as config_basedir
+    setup_logging(app, config_basedir)
 
-    if not os.path.exists(app.config['UPLOAD_FOLDER']):
-        os.makedirs(app.config['UPLOAD_FOLDER'])
+    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
     db.init_app(app)
     migrate.init_app(app, db)
