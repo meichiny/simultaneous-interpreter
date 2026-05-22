@@ -1194,4 +1194,48 @@
         bindSocketEvents();
     });
 
+    // --- Settings modal (API Key) ---
+    window.showSettingsModal = function() {
+        document.getElementById('settings-modal').style.display = 'flex';
+    };
+
+    window.hideSettingsModal = function() {
+        document.getElementById('settings-modal').style.display = 'none';
+        document.getElementById('settings-status').style.display = 'none';
+    };
+
+    window.saveSettings = async function() {
+        const appKey = document.getElementById('settings-app-key').value.trim();
+        const accessKey = document.getElementById('settings-access-key').value.trim();
+        const statusEl = document.getElementById('settings-status');
+
+        if (!appKey || !accessKey) {
+            statusEl.className = 'tip-box tip-warning';
+            statusEl.textContent = '请填写完整';
+            statusEl.style.display = 'block';
+            return;
+        }
+
+        try {
+            const res = await fetch('/api/save_env', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ app_key: appKey, access_key: accessKey }),
+            });
+            const data = await res.json();
+            if (data.success) {
+                statusEl.className = 'tip-box tip-success';
+                statusEl.textContent = '保存成功，密钥已生效';
+                statusEl.style.display = 'block';
+            } else {
+                statusEl.className = 'tip-box tip-warning';
+                statusEl.textContent = '保存失败：' + (data.error || '未知错误');
+                statusEl.style.display = 'block';
+            }
+        } catch (err) {
+            statusEl.className = 'tip-box tip-warning';
+            statusEl.textContent = '网络错误：' + err.message;
+            statusEl.style.display = 'block';
+        }
+    };
 })();
