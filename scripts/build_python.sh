@@ -8,7 +8,13 @@ echo "=== Building Python server with PyInstaller ==="
 
 rm -rf build/pyinstaller electron/resources/server
 
-pyinstaller \
+# 使用虚拟环境的 Python（确保包含所有依赖）
+PYINSTALLER_PYTHON="${SCRIPT_DIR}/.venv/bin/python3"
+if [ ! -f "$PYINSTALLER_PYTHON" ]; then
+    PYINSTALLER_PYTHON="python3"
+fi
+
+"$PYINSTALLER_PYTHON" -m PyInstaller \
   --name server \
   --onedir \
   --distpath electron/resources \
@@ -33,6 +39,9 @@ pyinstaller \
   --hidden-import websockets \
   --hidden-import werkzeug \
   --hidden-import alembic \
+  --hidden-import engineio.async_drivers.threading \
+  --hidden-import socketio.server \
+  --hidden-import engineio.server \
   --collect-all python_protogen \
   wsgi.py
 

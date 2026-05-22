@@ -44,7 +44,7 @@ function findAvailablePort(startPort) {
 function getPythonServerPath() {
   if (app.isPackaged) {
     const binaryName = process.platform === 'win32' ? 'server.exe' : 'server';
-    return path.join(process.resourcesPath, 'server', 'server', binaryName);
+    return path.join(process.resourcesPath, 'server', binaryName);
   }
   return null;
 }
