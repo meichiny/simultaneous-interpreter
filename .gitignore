@@ -18,6 +18,12 @@ venv/
 .venv/
 .DS_Store
 
+# PyInstaller 构建产物
+electron/resources/server/
+
+# Electron 构建产物
+electron/dist/
+
 # 本地说明文档和安装脚本（供同事参考，无需同步远程）
 使用说明.md
 docs/images/usage-*.png
