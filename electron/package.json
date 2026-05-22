@@ -1,0 +1,45 @@
+{
+  "name": "simultaneous-interpreter",
+  "version": "1.0.0",
+  "description": "同声传译 - 桌面客户端",
+  "main": "main.js",
+  "scripts": {
+    "dev": "electron .",
+    "build:python": "bash ../scripts/build_python.sh",
+    "build": "npm run build:python && electron-builder",
+    "build:mac": "npm run build:python && electron-builder --mac"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0"
+  },
+  "build": {
+    "appId": "com.interpreter.simultaneous",
+    "productName": "同声传译",
+    "directories": {
+      "output": "dist"
+    },
+    "extraResources": [
+      {
+        "from": "resources/server",
+        "to": "server",
+        "filter": ["**/*"]
+      }
+    ],
+    "mac": {
+      "target": ["dmg", "zip"],
+      "icon": "resources/icon.icns",
+      "category": "public.app-category.productivity",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false
+    },
+    "win": {
+      "target": ["nsis"],
+      "icon": "resources/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}
