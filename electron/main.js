@@ -152,7 +152,7 @@ function checkApiKey(dataDir) {
   return false;
 }
 
-function showSetupDialog(dataDir) {
+function showSetupDialog() {
   const setupWin = new BrowserWindow({
     width: 520, height: 460,
     resizable: false,
@@ -232,7 +232,7 @@ app.whenReady().then(async () => {
     await waitForServer();
     createWindow();
     if (!checkApiKey(dataDir)) {
-      showSetupDialog(dataDir);
+      showSetupDialog();
     }
   } catch (err) {
     dialog.showErrorBox('启动失败', err.message);
@@ -254,4 +254,23 @@ app.on('before-quit', () => {
 app.on('window-all-closed', () => app.quit());
 app.on('activate', () => {
   if (mainWindow === null && actualPort) createWindow();
+});
+
+// Suppress AudioContext.setSinkId / HTMLAudioElement.setSinkId errors
+// that occur in Electron when passing 'default' as device ID
+app.on('web-contents-created', (_event, wc) => {
+  wc.on('dom-ready', async () => {
+    await wc.executeJavaScript(`
+      ['AudioContext','HTMLAudioElement'].forEach(function(cls) {
+        var proto = window[cls]?.prototype;
+        if (!proto || !proto.setSinkId) return;
+        var orig = proto.setSinkId;
+        proto.setSinkId = function(id) {
+          return orig.call(this, id).catch(function(e) {
+            console.warn(cls + '.setSinkId suppressed:', e.message);
+          });
+        };
+      });
+    `).catch(function() {});
+  });
 });
