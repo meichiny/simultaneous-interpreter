@@ -45,8 +45,8 @@ def create_app(basedir=None):
     app = Flask(__name__)
     app.config.from_object(Config)
 
-    from app.config import basedir as config_basedir
-    setup_logging(app, config_basedir)
+    effective_basedir = basedir or os.environ.get('INTERPRETER_BASE_DIR') or os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+    setup_logging(app, effective_basedir)
 
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 

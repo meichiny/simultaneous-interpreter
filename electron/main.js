@@ -184,12 +184,17 @@ function showSetupDialog(dataDir) {
       const appKey = document.getElementById('appKey').value.trim();
       const accessKey = document.getElementById('accessKey').value.trim();
       if (!appKey || !accessKey) return alert('请填写完整');
-      await fetch('/api/save_env', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ app_key: appKey, access_key: accessKey }),
-      });
-      window.location.href = '/';
+      try {
+        const res = await fetch('http://127.0.0.1:${actualPort}/api/save_env', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ app_key: appKey, access_key: accessKey }),
+        });
+        if (!res.ok) throw new Error(await res.text());
+        window.location.href = 'http://127.0.0.1:${actualPort}/';
+      } catch (e) {
+        alert('保存失败: ' + e.message);
+      }
     }
   </script>
 </body></html>`;
