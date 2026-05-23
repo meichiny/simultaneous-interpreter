@@ -17,9 +17,15 @@ if [ ! -f "$BINARY" ]; then
     exit 1
 fi
 
-# Clear any stale server process
+# Clear any stale server process and wait for port release
 pkill -f "$BINARY" 2>/dev/null || true
-sleep 1
+for i in $(seq 1 15); do
+    if ! lsof -i :"$PORT" > /dev/null 2>&1; then
+        break
+    fi
+    echo "Waiting for port $PORT (TIME_WAIT) ... ${i}s"
+    sleep 1
+done
 
 "$BINARY" &
 PID=$!

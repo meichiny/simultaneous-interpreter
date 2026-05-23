@@ -56,6 +56,13 @@ def create_app(basedir=None):
     from app.routes import register_blueprints
     register_blueprints(app)
 
+    @app.after_request
+    def add_cors(response):
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+        return response
+
     socketio.init_app(
         app,
         async_mode='threading',
