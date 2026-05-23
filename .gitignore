@@ -19,6 +19,7 @@ venv/
 .DS_Store
 
 # PyInstaller 构建产物
+*.spec
 electron/resources/server/
 
 # Electron 构建产物
