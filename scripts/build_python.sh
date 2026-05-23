@@ -46,6 +46,6 @@ fi
   wsgi.py
 
 echo "=== Build complete ==="
-ls -lh electron/resources/server/server/server 2>/dev/null || \
-  ls -lh electron/resources/server/server/server.exe 2>/dev/null || \
+ls -lh electron/resources/server/server 2>/dev/null || \
+  ls -lh electron/resources/server/server.exe 2>/dev/null || \
   echo "Check electron/resources/server/ for output"

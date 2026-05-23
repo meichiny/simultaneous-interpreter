@@ -26,16 +26,34 @@ def display_window():
 @main_bp.route('/api/save_env', methods=['POST'])
 def save_env():
     data = request.get_json()
+    if not data:
+        return jsonify({'error': '无效的 JSON 请求体'}), 400
+
     app_key = data.get('app_key')
     access_key = data.get('access_key')
     if not app_key or not access_key:
         return jsonify({'error': '参数不完整'}), 400
 
+    if '\n' in app_key or '\n' in access_key:
+        return jsonify({'error': '密钥不能包含换行符'}), 400
+
     env_path = os.path.join(basedir, '.env')
+    existing = {}
+    if os.path.exists(env_path):
+        with open(env_path) as f:
+            for line in f:
+                line = line.strip()
+                if '=' in line:
+                    k, v = line.split('=', 1)
+                    existing[k] = v
+    existing.update({
+        'VOLCANO_APP_KEY': app_key,
+        'VOLCANO_ACCESS_KEY': access_key,
+        'FLASK_SECRET_KEY': os.urandom(24).hex(),
+    })
     with open(env_path, 'w') as f:
-        f.write(f"VOLCANO_APP_KEY={app_key}\n")
-        f.write(f"VOLCANO_ACCESS_KEY={access_key}\n")
-        f.write(f"FLASK_SECRET_KEY={os.urandom(24).hex()}\n")
+        for k, v in existing.items():
+            f.write(f"{k}={v}\n")
 
     os.environ['VOLCANO_APP_KEY'] = app_key
     os.environ['VOLCANO_ACCESS_KEY'] = access_key
