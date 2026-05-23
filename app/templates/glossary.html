@@ -267,6 +267,21 @@
             </div>
         </div>
     </div>
+
+    <!-- 新建分类弹窗 -->
+    <div id="new-category-modal" class="modal-mask">
+        <div class="modal-win">
+            <div class="modal-h">新建分类</div>
+            <div class="form-group">
+                <label class="form-label">分类名称</label>
+                <input type="text" id="new-category-input" class="form-input" placeholder="请输入分类名称" style="padding:8px; width:100%; box-sizing:border-box;">
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+                <button class="btn-nav" onclick="document.getElementById('new-category-modal').style.display='none'">取消</button>
+                <button id="confirm-new-category-btn" class="btn-primary">确认创建</button>
+            </div>
+        </div>
+    </div>
     <script src="{{ url_for('static', filename='js/glossary.js') }}"></script>
 </body>
 </html>

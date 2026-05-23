@@ -1,7 +1,7 @@
 import os
 
 from flask import Blueprint, render_template, request, jsonify
-from app.config import basedir
+from app.config import basedir, Config
 from app.models import TermCategory
 
 main_bp = Blueprint('main', __name__)
@@ -10,7 +10,7 @@ main_bp = Blueprint('main', __name__)
 @main_bp.route('/')
 def index():
     categories = TermCategory.query.order_by(TermCategory.display_order).all()
-    return render_template('index.html', categories=categories)
+    return render_template('index.html', categories=categories, has_api_key=bool(Config.VOLCANO_APP_KEY))
 
 
 @main_bp.route('/glossary')
@@ -30,11 +30,10 @@ def save_env():
         return jsonify({'error': '无效的 JSON 请求体'}), 400
 
     app_key = data.get('app_key')
-    access_key = data.get('access_key')
-    if not app_key or not access_key:
+    if not app_key:
         return jsonify({'error': '参数不完整'}), 400
 
-    if '\n' in app_key or '\n' in access_key:
+    if '\n' in app_key:
         return jsonify({'error': '密钥不能包含换行符'}), 400
 
     env_path = os.path.join(basedir, '.env')
@@ -46,16 +45,16 @@ def save_env():
                 if '=' in line:
                     k, v = line.split('=', 1)
                     existing[k] = v
-    existing.update({
-        'VOLCANO_APP_KEY': app_key,
-        'VOLCANO_ACCESS_KEY': access_key,
-        'FLASK_SECRET_KEY': os.urandom(24).hex(),
-    })
+    existing['VOLCANO_APP_KEY'] = app_key
+    existing.pop('VOLCANO_ACCESS_KEY', None)
+    if 'FLASK_SECRET_KEY' not in existing:
+        existing['FLASK_SECRET_KEY'] = os.urandom(24).hex()
     with open(env_path, 'w') as f:
         for k, v in existing.items():
             f.write(f"{k}={v}\n")
 
     os.environ['VOLCANO_APP_KEY'] = app_key
-    os.environ['VOLCANO_ACCESS_KEY'] = access_key
+    os.environ.pop('VOLCANO_ACCESS_KEY', None)
+    Config.VOLCANO_APP_KEY = app_key
 
     return jsonify({'success': True})

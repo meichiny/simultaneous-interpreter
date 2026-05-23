@@ -1192,6 +1192,9 @@
         await initDevices();
         loadGlossary();
         bindSocketEvents();
+        if (!window.__HAS_API_KEY__) {
+            showSettingsModal();
+        }
     });
 
     // --- Settings modal (API Key) ---
@@ -1206,10 +1209,9 @@
 
     window.saveSettings = async function() {
         const appKey = document.getElementById('settings-app-key').value.trim();
-        const accessKey = document.getElementById('settings-access-key').value.trim();
         const statusEl = document.getElementById('settings-status');
 
-        if (!appKey || !accessKey) {
+        if (!appKey) {
             statusEl.className = 'tip-box tip-warning';
             statusEl.textContent = '请填写完整';
             statusEl.style.display = 'block';
@@ -1220,7 +1222,7 @@
             const res = await fetch('/api/save_env', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ app_key: appKey, access_key: accessKey }),
+                body: JSON.stringify({ app_key: appKey }),
             });
             const data = await res.json();
             if (data.success) {

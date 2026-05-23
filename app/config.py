@@ -24,4 +24,3 @@ class Config:
     MAX_CONTENT_LENGTH = 100 * 1024 * 1024  # 100MB
 
     VOLCANO_APP_KEY = os.environ.get("VOLCANO_APP_KEY")
-    VOLCANO_ACCESS_KEY = os.environ.get("VOLCANO_ACCESS_KEY")

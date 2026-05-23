@@ -141,67 +141,6 @@ function createWindow() {
   }
 }
 
-function checkApiKey(dataDir) {
-  const envPath = path.join(dataDir, '.env');
-  if (fs.existsSync(envPath)) return true;
-  if (!app.isPackaged) {
-    const projectRoot = path.resolve(__dirname, '..');
-    const devEnv = path.join(projectRoot, '.env');
-    if (fs.existsSync(devEnv)) return true;
-  }
-  return false;
-}
-
-function showSetupDialog() {
-  const setupWin = new BrowserWindow({
-    width: 520, height: 460,
-    resizable: false,
-    parent: mainWindow,
-    modal: true,
-    webPreferences: { nodeIntegration: false, contextIsolation: true },
-  });
-
-  const html = `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>首次配置</title>
-<style>
-  body { font-family: -apple-system, sans-serif; padding: 32px; line-height: 1.6; }
-  h2 { margin-top: 0; } label { display: block; margin: 12px 0 4px; font-weight: 600; }
-  input { width: 100%; padding: 8px; box-sizing: border-box; font-size: 14px; }
-  button { margin-top: 20px; padding: 10px 24px; font-size: 14px; cursor: pointer; }
-  .hint { color: #888; font-size: 12px; margin: 4px 0; }
-</style></head>
-<body>
-  <h2>首次使用配置</h2>
-  <p>请填写火山引擎 API 密钥以启用翻译服务。</p>
-  <label>VOLCANO_APP_KEY</label>
-  <input id="appKey" type="text" placeholder="输入 AppKey" />
-  <label>VOLCANO_ACCESS_KEY</label>
-  <input id="accessKey" type="text" placeholder="输入 AccessKey" />
-  <div class="hint">可在火山引擎控制台 > 密钥管理 中获取</div>
-  <button onclick="save()">保存并启动</button>
-  <script>
-    async function save() {
-      const appKey = document.getElementById('appKey').value.trim();
-      const accessKey = document.getElementById('accessKey').value.trim();
-      if (!appKey || !accessKey) return alert('请填写完整');
-      try {
-        const res = await fetch('http://127.0.0.1:${actualPort}/api/save_env', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ app_key: appKey, access_key: accessKey }),
-        });
-        if (!res.ok) throw new Error(await res.text());
-        window.location.href = 'http://127.0.0.1:${actualPort}/';
-      } catch (e) {
-        alert('保存失败: ' + e.message);
-      }
-    }
-  </script>
-</body></html>`;
-
-  setupWin.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
-}
-
 function buildMenu() {
   const template = [
     {
@@ -231,9 +170,6 @@ app.whenReady().then(async () => {
     await startPythonServer(dataDir);
     await waitForServer();
     createWindow();
-    if (!checkApiKey(dataDir)) {
-      showSetupDialog();
-    }
   } catch (err) {
     dialog.showErrorBox('启动失败', err.message);
     app.quit();

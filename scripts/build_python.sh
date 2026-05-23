@@ -34,7 +34,6 @@ fi
   --hidden-import requests \
   --hidden-import bidict \
   --hidden-import tenacity \
-  --hidden-import protobuf \
   --hidden-import simple_websocket \
   --hidden-import websockets \
   --hidden-import werkzeug \
@@ -42,6 +41,7 @@ fi
   --hidden-import engineio.async_drivers.threading \
   --hidden-import socketio.server \
   --hidden-import engineio.server \
+  --collect-all google.protobuf \
   --collect-all python_protogen \
   wsgi.py
 

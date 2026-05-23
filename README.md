@@ -101,7 +101,7 @@ pip install -r requirements.txt
 
 #### 3. 申请火山引擎 API 密钥
 
-本项目需要 `VOLCANO_APP_KEY`（API 密钥或 App ID），旧版控制台还需 `VOLCANO_ACCESS_KEY`（Access Token），按以下步骤获取：
+本项目需要 `VOLCANO_APP_KEY`（API Key），按以下步骤获取：
 
 **第一步：注册并实名认证**
 
@@ -114,29 +114,12 @@ pip install -r requirements.txt
 2. 在左侧导航栏的「api服务中心」或「开通管理」，找到「**豆包同声传译 2.0 大模型**」并开通（有免费试用额度）
 3. 注意：请选择「豆包同声传译 2.0 大模型」，不要选旧版同声传译服务
 
-**第三步：创建应用，获取 App Key**
+**第三步：获取 API Key**
 
-- 旧版控制台
-  
-  1. 点击「应用管理」→「创建应用」
-  2. 填写应用名称，在「接入能力」中勾选「豆包同声传译 2.0 大模型」
-  3. 创建完成后，在应用列表中查看 **App ID**（即 `VOLCANO_APP_KEY`）
+1. 在左侧导航栏点击「API key管理」
+2. 在 API key 管理列表查看并复制 **Api Key**（即 `VOLCANO_APP_KEY`）
 
-- 新版控制台
-  
-  1. 在左侧导航栏点击「API key管理」
-  2. 在 api key 管理列表查看 **Api Key**（即 `VOLCANO_APP_KEY`）
-
-**第四步：获取 Access Key**
-
-- 旧版控制台
-  
-  1. 在左侧导航栏的「api服务中心」，点击「豆包同声传译2.0大模型」
-  2. 在「服务接口认证信息」区域，点击查看 **Access Token** （即 `VOLCANO_ACCESS_KEY`）
-
-（新版控制台API接入使用API Key，无需 access key，旧版本使用APP ID 和 access token）
-
-**第五步：配置到项目中**
+**第四步：配置到项目中**
 
 ```bash
 cp .env.example .env
@@ -144,15 +127,8 @@ cp .env.example .env
 
 编辑 `.env` 文件，填入获取的密钥：
 
-新旧控制台的密钥信息二选一，无需都填写。
-
 ```
-# 新版控制台（仅需 API Key）
-VOLCANO_APP_KEY=your_api_key
-
-# 旧版控制台（需 App ID + Access Token）
-# VOLCANO_APP_KEY=your_app_id
-# VOLCANO_ACCESS_KEY=your_access_token
+VOLCANO_APP_KEY=your_api_key_here
 ```
 
 #### 4. 启动
@@ -320,7 +296,7 @@ pip install -r requirements.txt
 
 #### 3. Apply for Volcano Engine API Keys
 
-This project requires `VOLCANO_APP_KEY` (API key or App ID). Legacy console additionally requires `VOLCANO_ACCESS_KEY` (access token). Follow these steps:
+This project requires `VOLCANO_APP_KEY` (API Key). Follow these steps:
 
 **Step 1: Register and Complete Identity Verification**
 
@@ -333,45 +309,21 @@ This project requires `VOLCANO_APP_KEY` (API key or App ID). Legacy console addi
 2. In the left sidebar, find "API Service Center" or "Service Activation", locate "**Doubao Simultaneous Translation 2.0 Model**" and enable it (free trial quota available)
 3. Note: Make sure to select "Doubao Simultaneous Translation 2.0 Model", not the legacy translation service
 
-**Step 3: Create an Application and Get the App Key**
+**Step 3: Get the API Key**
 
-- **Legacy Console**
-  
-  1. Click "Application Management" → "Create Application"
-  2. Enter an application name and check "Doubao Simultaneous Translation 2.0 Model" under "Access Capabilities"
-  3. After creation, find the **App ID** in the application list (this is your `VOLCANO_APP_KEY`)
+1. Click "API Key Management" in the left sidebar
+2. View the **Api Key** in the API key management list (this is your `VOLCANO_APP_KEY`)
 
-- **New Console**
-  
-  1. Click "API Key Management" in the left sidebar
-  2. View the **Api Key** in the API key management list (this is your `VOLCANO_APP_KEY`)
-
-**Step 4: Get the Access Key**
-
-- **Legacy Console**
-  
-  1. In the left sidebar, go to "API Service Center" and click "Doubao Simultaneous Translation 2.0 Model"
-  2. In the "Service Interface Authentication Information" section, click to view the **Access Token** (this is your `VOLCANO_ACCESS_KEY`)
-
-(The new console uses API Key for API access, no access key required. The legacy version uses APP ID and access token.)
-
-**Step 5: Configure the Project**
+**Step 4: Configure the Project**
 
 ```bash
 cp .env.example .env
 ```
 
-Edit the `.env` file and enter your keys:
-
-Choose one of the following configurations based on your console version:
+Edit the `.env` file and enter your key:
 
 ```
-# For new console (API Key only)
-VOLCANO_APP_KEY=your_api_key
-
-# For legacy console (App ID + Access Token)
-# VOLCANO_APP_KEY=your_app_id
-# VOLCANO_ACCESS_KEY=your_access_token
+VOLCANO_APP_KEY=your_api_key_here
 ```
 
 #### 4. Start

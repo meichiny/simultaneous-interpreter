@@ -258,16 +258,26 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // 功能逻辑
-    document.getElementById('add-category-btn').onclick = async () => {
-        const name = prompt("输入新分类名称:");
-        if(name) {
-            await fetch(appendQuery('/api/glossary/categories'), {
-                method:'POST', headers:{'Content-Type':'application/json'},
-                body:JSON.stringify({name})
-            });
-            loadCats();
-        }
+    document.getElementById('add-category-btn').onclick = () => {
+        document.getElementById('new-category-input').value = '';
+        document.getElementById('new-category-modal').style.display = 'flex';
+        document.getElementById('new-category-input').focus();
     };
+
+    document.getElementById('confirm-new-category-btn').onclick = async () => {
+        const name = document.getElementById('new-category-input').value.trim();
+        if(!name) return alert('请输入分类名称');
+        await fetch(appendQuery('/api/glossary/categories'), {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({name})
+        });
+        document.getElementById('new-category-modal').style.display = 'none';
+        loadCats();
+    };
+
+    document.getElementById('new-category-input').addEventListener('keydown', (e) => {
+        if(e.key === 'Enter') document.getElementById('confirm-new-category-btn').click();
+    });
 
     document.getElementById('add-term-btn').onclick = () => {
         if(!curCatId) return alert('请先选择分类');
