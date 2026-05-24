@@ -5,6 +5,9 @@
 
     // 初始化
     document.addEventListener('DOMContentLoaded', () => {
+        // Guard: return early if log elements don't exist
+        if (!document.getElementById('log-container')) return;
+
         // 绑定事件
         document.getElementById('search-input').addEventListener('input', filterLogs);
         document.getElementById('channel-filter').addEventListener('change', filterLogs);
@@ -17,37 +20,38 @@
         // 立即尝试获取日志
         refreshLogs();
 
-        // 定时刷新（从 opener 获取最新日志）
-        setInterval(refreshLogs, 1000);
+        // 定时刷新
+        const inlineMode = !window.opener;
+        setInterval(inlineMode ? refreshLogsInline : refreshLogs, 1000);
 
-        // 监听 postMessage（用于接收初始日志和新日志）
-        window.addEventListener('message', (e) => {
-            if (!e.data) return;
+        // 监听 postMessage（仅 standalone 模式）
+        if (!inlineMode) {
+            window.addEventListener('message', (e) => {
+                if (!e.data) return;
 
-            if (e.data.type === 'initLogs' && Array.isArray(e.data.logs)) {
-                allLogs = e.data.logs;
-                filterLogs();
-            } else if (e.data.type === 'newLog' && e.data.log) {
-                allLogs.push(e.data.log);
-                filterLogs();
-            } else if (e.data.type === 'clearLogs') {
-                allLogs = [];
-                filteredLogs = [];
-                renderLogs();
-                updateStats();
-            }
-        });
+                if (e.data.type === 'initLogs' && Array.isArray(e.data.logs)) {
+                    allLogs = e.data.logs;
+                    filterLogs();
+                } else if (e.data.type === 'newLog' && e.data.log) {
+                    allLogs.push(e.data.log);
+                    filterLogs();
+                } else if (e.data.type === 'clearLogs') {
+                    allLogs = [];
+                    filteredLogs = [];
+                    renderLogs();
+                    updateStats();
+                }
+            });
+        }
     });
 
     // 安全：验证 opener 是否同源
     function isOpenerValid() {
         try {
             if (!window.opener) return false;
-            // 跨域访问会抛出异常
             const openerOrigin = window.opener.location.origin;
             return openerOrigin === window.location.origin;
         } catch (e) {
-            // 跨域或无法访问
             return false;
         }
     }
@@ -56,9 +60,16 @@
         if (isOpenerValid() && window.opener.sessionLogs) {
             const newLogs = window.opener.sessionLogs;
             if (newLogs.length !== allLogs.length) {
-                allLogs = [...newLogs]; // 复制数组
+                allLogs = [...newLogs];
                 filterLogs();
             }
+        }
+    }
+
+    function refreshLogsInline() {
+        if (window.sessionLogs && window.sessionLogs.length !== allLogs.length) {
+            allLogs = [...window.sessionLogs];
+            filterLogs();
         }
     }
 
@@ -173,12 +184,16 @@
         allLogs = [];
         filteredLogs = [];
 
-        // 同时清空 opener 的日志（验证同源）
         if (isOpenerValid() && window.opener.sessionLogs) {
             window.opener.sessionLogs = [];
             if (window.opener.clearLogs) {
                 window.opener.clearLogs();
             }
+        }
+
+        if (window.sessionLogs) {
+            window.sessionLogs = [];
+            if (window.clearLogs) window.clearLogs();
         }
 
         renderLogs();

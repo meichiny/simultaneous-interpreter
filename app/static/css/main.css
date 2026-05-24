@@ -359,6 +359,14 @@ input[type="checkbox"] { accent-color: var(--accent); }
 .log-level-debug { color: var(--text-muted); }
 .log-channel { color: var(--accent); margin-right: 4px; }
 
+.logs-toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 4px; }
+#settings-logs #log-container {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius-md); padding: 12px;
+  height: 320px; overflow-y: auto; font-family: 'SF Mono', 'Menlo', monospace;
+  font-size: 11px; line-height: 1.5;
+}
+
 /* --- Glossary --- */
 .glossary-layout { display: flex; gap: 16px; height: 100%; }
 

@@ -251,7 +251,26 @@
 
           <!-- Logs Tab -->
           <div class="settings-panel" id="settings-logs">
-            <div style="text-align:center;padding:40px;color:var(--text-muted);font-size:11px;">日志加载中...</div>
+            <div class="logs-toolbar">
+              <input type="text" id="search-input" class="form-input" placeholder="搜索日志..." style="flex:1;min-width:0;">
+              <select id="channel-filter" class="form-input" style="width:auto;">
+                <option value="all">全部通道</option>
+                <option value="recognize">识别</option>
+                <option value="translate">翻译</option>
+                <option value="audio">音频</option>
+                <option value="system">系统</option>
+              </select>
+              <select id="level-filter" class="form-input" style="width:auto;">
+                <option value="all">全部级别</option>
+                <option value="INFO">INFO</option>
+                <option value="WARN">WARN</option>
+                <option value="ERROR">ERROR</option>
+              </select>
+              <button class="btn btn-secondary" onclick="window.exportLogs ? window.exportLogs() : exportLogs()">导出</button>
+              <button class="btn btn-secondary" onclick="window.clearAllLogs ? window.clearAllLogs() : clearAllLogs()" style="color:var(--danger);">清空</button>
+            </div>
+            <div id="stats" style="padding:4px 0 8px;font-size:10px;color:var(--text-muted);">共 0 条日志</div>
+            <div class="log-container" id="log-container"></div>
           </div>
 
           <!-- Account Tab -->
