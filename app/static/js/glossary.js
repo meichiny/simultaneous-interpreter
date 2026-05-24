@@ -2,6 +2,10 @@
 // 术语管理页业务逻辑
 // ===========================================
 document.addEventListener('DOMContentLoaded', () => {
+    // Guard: only run if glossary elements exist on this page
+    if (!document.getElementById('category-tree') && !document.getElementById('glossary-categories')) {
+        return;
+    }
     const targetUserId = '';
     const appendQuery = (url) => url;
 

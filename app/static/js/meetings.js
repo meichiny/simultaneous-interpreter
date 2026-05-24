@@ -2,6 +2,10 @@
 let currentMeetingId = null;
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Guard: only run if meeting elements exist on this page
+    if (!document.getElementById('meeting-list') && !document.getElementById('meetings-list')) {
+        return;
+    }
     const backBtn = document.getElementById('back-btn');
     backBtn.href = '/';
     backBtn.textContent = '← 返回';
