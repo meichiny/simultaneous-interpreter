@@ -123,6 +123,7 @@ function createWindow() {
     width: 1280, height: 800,
     minWidth: 900, minHeight: 600,
     title: '同声传译',
+    titleBarStyle: 'hiddenInset',
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
