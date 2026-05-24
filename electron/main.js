@@ -137,6 +137,27 @@ function createWindow() {
   mainWindow.once('ready-to-show', () => mainWindow.show());
   mainWindow.on('closed', () => { mainWindow = null; });
 
+  // Intercept window.open for projection screen — use a frameless native window
+  mainWindow.webContents.setWindowOpenHandler(({ url, frameName }) => {
+    if (frameName === 'projection') {
+      return {
+        action: 'allow',
+        overrideBrowserWindowOptions: {
+          width: 800,
+          height: 600,
+          frame: false,
+          alwaysOnTop: true,
+          fullscreenable: true,
+          webPreferences: {
+            nodeIntegration: false,
+            contextIsolation: true,
+          },
+        },
+      };
+    }
+    return { action: 'allow' };
+  });
+
   if (!app.isPackaged) {
     mainWindow.webContents.openDevTools();
   }
