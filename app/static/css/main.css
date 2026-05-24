@@ -403,6 +403,11 @@ input[type="checkbox"] { accent-color: var(--accent); }
   border-radius: var(--radius-lg); padding: 12px; overflow-y: auto;
 }
 
+/* --- Status Tips --- */
+.tip-box { padding: 8px 12px; border-radius: var(--radius-md); font-size: 11px; margin-bottom: 12px; }
+.tip-success { background: rgba(16, 185, 129, 0.12); color: var(--green); border: 1px solid rgba(16, 185, 129, 0.25); }
+.tip-warning { background: rgba(251, 191, 36, 0.12); color: var(--yellow); border: 1px solid rgba(251, 191, 36, 0.25); }
+
 /* --- Scrollbar --- */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }

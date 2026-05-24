@@ -2,13 +2,12 @@
 let currentMeetingId = null;
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Guard: only run if meeting elements exist on this page
-    if (!document.getElementById('meeting-list') && !document.getElementById('meetings-list')) {
+    // Guard: only run on standalone meetings page
+    if (!document.getElementById('meeting-list')) {
         return;
     }
-    const backBtn = document.getElementById('back-btn');
-    backBtn.href = '/';
-    backBtn.textContent = '← 返回';
+    var backBtn = document.getElementById('back-btn');
+    if (backBtn) { backBtn.href = '/'; backBtn.textContent = '← 返回'; }
 
     loadMeetings();
     document.addEventListener('click', (e) => {

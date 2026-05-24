@@ -1067,7 +1067,10 @@
         socket.on('log_update', d => addLog(d));
 
         intervalIds.ping = setInterval(() => { if (socket.connected) socket.emit('ping_from_client', { t: Date.now() }); }, CONFIG.PING_INTERVAL);
-        if (socket.connected) updateStatus('connected', '服务已连接 / Service Connected');
+        if (socket.connected) {
+            updateStatus('connected', '服务已连接 / Service Connected');
+            checkStartButtonState();
+        }
     }
 
     // --- 语言联动：根据源语言禁用不合法的目标选项 ---
@@ -1132,6 +1135,10 @@
             return;
         }
 
+        statusEl.className = 'tip-box';
+        statusEl.textContent = '验证中... / Testing...';
+        statusEl.style.display = 'block';
+
         try {
             const res = await fetch('/api/save_env', {
                 method: 'POST',
@@ -1140,9 +1147,16 @@
             });
             const data = await res.json();
             if (data.success) {
-                statusEl.className = 'tip-box tip-success';
-                statusEl.textContent = '保存成功，密钥已生效';
+                window.__HAS_API_KEY__ = data.valid;
+                if (data.valid) {
+                    statusEl.className = 'tip-box tip-success';
+                    statusEl.textContent = '保存成功，密钥有效';
+                } else {
+                    statusEl.className = 'tip-box tip-warning';
+                    statusEl.textContent = '保存成功，但连接测试失败：' + (data.message || '未知错误');
+                }
                 statusEl.style.display = 'block';
+                updateConfigOverview();
             } else {
                 statusEl.className = 'tip-box tip-warning';
                 statusEl.textContent = '保存失败：' + (data.error || '未知错误');
