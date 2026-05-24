@@ -27,8 +27,10 @@
     window.openDisplayWindow = function() {
         if (window.electronAPI && window.electronAPI.openDisplay) {
             window.electronAPI.openDisplay();
+        } else if (!projectionWindow || projectionWindow.closed) {
+            projectionWindow = window.open('/display', 'projection', 'width=800,height=600');
         } else {
-            window.open('/display', 'projection', 'width=800,height=600');
+            projectionWindow.focus();
         }
     };
 
