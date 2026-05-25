@@ -6,6 +6,7 @@
     <title>AI Meeting Mate</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <link rel="stylesheet" href="/static/css/main.css">
+    <style id="noflash">#page-translate{display:none!important}</style>
     <style>
         * { user-select: none; }
 
@@ -44,24 +45,32 @@
   <div class="app-layout">
     <!-- Left Sidebar -->
     <div class="sidebar">
-      <div class="sidebar-item active" data-page="translate" onclick="switchPage('translate')">
+      <div class="sidebar-item" data-page="translate" onclick="switchPage('translate')">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        <span class="sidebar-label">翻译</span>
       </div>
-      <div class="sidebar-item" data-page="glossary" onclick="window.location.href='/glossary'">
+      <div class="sidebar-item" data-page="session" onclick="switchPage('session')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        <span class="sidebar-label">会话设置</span>
+      </div>
+      <div class="sidebar-item" data-page="glossary" onclick="switchPage('glossary')">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+        <span class="sidebar-label">词库</span>
       </div>
-      <div class="sidebar-item" data-page="meetings" onclick="window.location.href='/meetings'">
+      <div class="sidebar-item" data-page="meetings" onclick="switchPage('meetings')">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+        <span class="sidebar-label">会议</span>
       </div>
       <div class="sidebar-item" data-page="settings" onclick="switchPage('settings')">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+        <span class="sidebar-label">设置</span>
       </div>
     </div>
 
     <!-- Main Content Area -->
     <div class="main-area" id="mainArea">
       <!-- Page: Translate -->
-      <div class="page active" id="page-translate">
+      <div class="page" id="page-translate">
         <div class="page-header">翻译 / Translate</div>
         <div class="page-content" id="translate-content">
           <div id="translate-stopped">
@@ -70,6 +79,7 @@
               <div class="config-row"><span class="config-label">语言方向</span><span class="config-value" id="ov-language">中文 → 英语</span></div>
               <div class="config-row"><span class="config-label">通道模式</span><span class="config-value" id="ov-channel">单通道</span></div>
               <div class="config-row"><span class="config-label">麦克风</span><span class="config-value" id="ov-mic">未选择</span></div>
+              <div class="config-row"><span class="config-label">语音输出</span><span class="config-value" id="ov-tts">已启用</span></div>
               <div class="config-row"><span class="config-label">术语库</span><span class="config-value" id="ov-glossary">未选择</span></div>
               <div class="config-row" style="border-top-color:var(--border-strong);margin-top:8px;padding-top:12px;">
                 <span class="config-label">服务器</span>
@@ -115,56 +125,28 @@
         </div>
       </div>
 
-      <!-- Page: Glossary -->
-      <div class="page" id="page-glossary">
-        <div class="page-header">术语管理 / Glossary</div>
+      <!-- Page: Session Config -->
+      <div class="page" id="page-session">
+        <div class="page-header">会话设置 / Session Config</div>
         <div class="page-content">
-          <div class="glossary-layout">
-            <div class="glossary-categories" id="glossary-categories"></div>
-            <div class="glossary-terms" id="glossary-terms"></div>
-            <div class="glossary-editor" id="glossary-editor"></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Page: Meetings -->
-      <div class="page" id="page-meetings">
-        <div class="page-header">会议记录 / Meetings</div>
-        <div class="page-content">
-          <div class="meetings-layout">
-            <div class="meetings-list" id="meetings-list"></div>
-            <div class="meetings-transcript" id="meetings-transcript"></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Page: Settings -->
-      <div class="page" id="page-settings">
-        <div class="page-header">设置 / Settings</div>
-        <div class="page-content">
-          <div class="settings-tabs" id="settings-tabs">
-            <div class="settings-tab active" data-tab="lang" onclick="switchSettingsTab('lang')">语言</div>
-            <div class="settings-tab" data-tab="audio" onclick="switchSettingsTab('audio')">音频</div>
-            <div class="settings-tab" data-tab="display" onclick="switchSettingsTab('display')">显示</div>
-            <div class="settings-tab" data-tab="logs" onclick="switchSettingsTab('logs')">日志</div>
-            <div class="settings-tab" data-tab="account" onclick="switchSettingsTab('account')">账户</div>
-          </div>
-
-          <!-- Language Tab -->
-          <div class="settings-panel active" id="settings-lang">
-            <div class="form-group">
-              <label class="form-label">我说的 / My Speak</label>
-              <select id="lang-my-speak">
-                <option value="zh" selected>中文 Chinese</option><option value="en">英语 English</option><option value="ja">日语 Japanese</option><option value="fr">法语 French</option><option value="de">德语 German</option><option value="es">西语 Spanish</option><option value="pt">葡语 Portuguese</option><option value="id">印尼语 Indonesian</option><option value="zhen">中英混说 Mixed</option>
-              </select>
+          <!-- Language Section -->
+          <div class="form-section">
+            <div class="form-section-title">语言 / Language</div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">我说的 / My Speak</label>
+                <select id="lang-my-speak">
+                  <option value="zh" selected>中文 Chinese</option><option value="en">英语 English</option><option value="ja">日语 Japanese</option><option value="fr">法语 French</option><option value="de">德语 German</option><option value="es">西语 Spanish</option><option value="pt">葡语 Portuguese</option><option value="id">印尼语 Indonesian</option><option value="zhen">中英混说 Mixed</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label" style="color:var(--accent)">对方听到的 / Their Hear</label>
+                <select id="lang-their-hear">
+                  <option value="en" selected>英语 English</option><option value="zh">中文 Chinese</option><option value="ja">日语 Japanese</option><option value="fr">法语 French</option><option value="de">德语 German</option><option value="es">西语 Spanish</option><option value="pt">葡语 Portuguese</option><option value="id">印尼语 Indonesian</option><option value="zhen">中英混说 Mixed</option>
+                </select>
+              </div>
             </div>
-            <div class="form-group">
-              <label class="form-label" style="color:var(--accent)">对方听到的 / Their Hear</label>
-              <select id="lang-their-hear">
-                <option value="en" selected>英语 English</option><option value="zh">中文 Chinese</option><option value="ja">日语 Japanese</option><option value="fr">法语 French</option><option value="de">德语 German</option><option value="es">西语 Spanish</option><option value="pt">葡语 Portuguese</option><option value="id">印尼语 Indonesian</option><option value="zhen">中英混说 Mixed</option>
-              </select>
-            </div>
-            <div style="border-top:1px solid var(--border);padding-top:16px;margin-top:16px;">
+            <div class="form-row">
               <div class="form-group">
                 <label class="form-label">对方说的 / Their Speak</label>
                 <select id="lang-their-speak">
@@ -178,7 +160,7 @@
                 </select>
               </div>
             </div>
-            <div style="border-top:1px solid var(--border);padding-top:16px;margin-top:16px;">
+            <div class="form-row">
               <div class="form-group">
                 <label class="form-label">我的输出音色 / My Voice</label>
                 <select id="voice-speak">
@@ -194,8 +176,9 @@
             </div>
           </div>
 
-          <!-- Audio Tab -->
-          <div class="settings-panel" id="settings-audio">
+          <!-- Audio Section -->
+          <div class="form-section">
+            <div class="form-section-title">音频 / Audio</div>
             <div class="form-group">
               <label class="form-label">通道模式 / Channel Mode</label>
               <select id="channel-mode" onchange="onChannelModeChange()">
@@ -215,49 +198,243 @@
                 <div>Cable B (从会议输入): <span id="cable-b-status" style="color:var(--text-secondary);">检测中...</span></div>
               </div>
             </div>
-            <div class="form-group"><label class="form-label">麦克风 / Input (Mic)</label><select id="dev-real-mic"><option>扫描中...</option></select></div>
-            <div class="form-group" id="speaker-output-group"><label class="form-label">耳机 / Output (Speaker)</label><select id="dev-real-spk"><option>扫描中...</option></select></div>
-            <div class="form-group" style="border-top:1px solid var(--border);padding-top:16px;">
-              <label class="form-label">语音输出 / TTS Output</label>
-              <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;">
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">麦克风 / Input (Mic)</label>
+                <select id="dev-real-mic"><option>扫描中...</option></select>
+              </div>
+              <div class="form-group" id="speaker-output-group">
+                <label class="form-label">耳机 / Output (Speaker)</label>
+                <select id="dev-real-spk"><option>扫描中...</option></select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="checkbox-label">
                 <input type="checkbox" id="tts-enable" checked onchange="onTtsToggle()">
-                <span>启用语音播放 / Enable TTS</span>
+                启用语音播放 / Enable TTS
               </label>
             </div>
             <div class="form-group">
               <button class="btn btn-secondary" id="btn-calib" onclick="calibrateNoise()">⚡ 智能校准 / Auto Calibrate</button>
               <div style="font-size:10px;color:var(--text-muted);margin-top:4px;">校准请保持安静 / Please keep silent during calibration</div>
             </div>
-            <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:12px;margin-top:12px;">
-              <div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">内部路由检测 / Routing Check</div>
-              <div style="display:flex;gap:8px;padding:4px 0;font-size:12px;color:var(--text-secondary);">AI 听 (In): <span id="status-cable-b" style="color:var(--text-primary);">扫描中...</span></div>
-              <div style="display:flex;gap:8px;padding:4px 0;font-size:12px;color:var(--text-secondary);">AI 说 (Out): <span id="status-cable-a" style="color:var(--text-primary);">扫描中...</span></div>
+            <div class="routing-card">
+              <div class="routing-card-title">内部路由检测 / Routing Check</div>
+              <div>AI 听 (In): <span id="status-cable-b" style="color:var(--text-primary);">扫描中...</span></div>
+              <div>AI 说 (Out): <span id="status-cable-a" style="color:var(--text-primary);">扫描中...</span></div>
             </div>
           </div>
 
-          <!-- Display Tab -->
-          <div class="settings-panel" id="settings-display">
-            <div class="form-group"><label class="form-label">字号 / Font Size <span style="color:var(--text-muted);font-size:10px;">10-72</span></label><input type="number" id="display-font-size" value="24" min="10" max="72" class="form-input" onchange="updateDisplaySetting('fontSize', this.value)"></div>
-            <div class="form-group"><label class="form-label">行高 / Line Height <span style="color:var(--text-muted);font-size:10px;">1.0-3.0</span></label><input type="number" id="display-line-height" value="1.6" min="1" max="3" step="0.1" class="form-input" onchange="updateDisplaySetting('lineHeight', this.value)"></div>
-            <div class="form-group"><label class="form-label">译文颜色 / Trans Color</label><input type="color" id="display-trans-color" value="#ffffff" oninput="updateDisplaySetting('transColor', this.value)"></div>
-            <div class="form-group"><label class="form-label">原文颜色 / Orig Color</label><input type="color" id="display-orig-color" value="#b3b3b3" oninput="updateDisplaySetting('origColor', this.value)"></div>
-            <div class="form-group"><label class="form-label">背景颜色 / Background</label><input type="color" id="display-bg-color" value="#000000" oninput="updateDisplaySetting('bgColor', this.value)"></div>
-            <div class="form-group"><label class="form-label">背景透明度 / Opacity</label><select id="display-bg-opacity" class="form-input" onchange="updateDisplaySetting('bgOpacity', this.value)"><option value="0">0%</option><option value="20">20%</option><option value="40">40%</option><option value="60">60%</option><option value="80">80%</option><option value="100" selected>100%</option></select></div>
+          <!-- Glossary Section -->
+          <div class="form-section">
+            <div class="form-section-title">术语库 / Glossary</div>
+            <div class="glossary-list" id="glossary-list-area">
+              <div style="text-align:center;padding:16px;color:var(--text-muted);font-size:12px;">加载中...</div>
+            </div>
+            <div style="margin-top:8px;font-size:10px;color:var(--text-muted);">选择的术语将在开始翻译时应用到会话中。勾选多个分类可合并使用。</div>
+          </div>
+
+          <!-- Display Section -->
+          <div class="form-section">
+            <div class="form-section-title">投屏样式 / Display</div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">字号 / Font Size <span style="color:var(--text-muted);font-size:10px;">10-72</span></label>
+                <input type="number" id="display-font-size" value="24" min="10" max="72" class="form-input" onchange="updateDisplaySetting('fontSize', this.value)">
+              </div>
+              <div class="form-group">
+                <label class="form-label">行高 / Line Height <span style="color:var(--text-muted);font-size:10px;">1.0-3.0</span></label>
+                <input type="number" id="display-line-height" value="1.6" min="1" max="3" step="0.1" class="form-input" onchange="updateDisplaySetting('lineHeight', this.value)">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">译文颜色 / Trans Color</label>
+                <input type="color" id="display-trans-color" value="#ffffff" oninput="updateDisplaySetting('transColor', this.value)">
+              </div>
+              <div class="form-group">
+                <label class="form-label">原文颜色 / Orig Color</label>
+                <input type="color" id="display-orig-color" value="#b3b3b3" oninput="updateDisplaySetting('origColor', this.value)">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">背景颜色 / Background</label>
+                <input type="color" id="display-bg-color" value="#000000" oninput="updateDisplaySetting('bgColor', this.value)">
+              </div>
+              <div class="form-group">
+                <label class="form-label">背景透明度 / Opacity</label>
+                <select id="display-bg-opacity" class="form-input" onchange="updateDisplaySetting('bgOpacity', this.value)">
+                  <option value="0">0%</option><option value="20">20%</option><option value="40">40%</option><option value="60">60%</option><option value="80">80%</option><option value="100" selected>100%</option>
+                </select>
+              </div>
+            </div>
             <div style="display:flex;gap:8px;">
               <button class="btn btn-secondary" onclick="resetDisplaySettings()" style="flex:1;">重置默认 / Reset</button>
               <button class="btn btn-secondary" onclick="previewDisplaySettings()" style="flex:1;">预览 / Preview</button>
             </div>
           </div>
+        </div>
+      </div>
 
-          <!-- Logs Tab -->
-          <div class="settings-panel" id="settings-logs">
+      <!-- Page: Glossary -->
+      <div class="page" id="page-glossary">
+        <div class="page-header">术语管理 / Glossary</div>
+        <div class="page-content" style="padding:0;overflow:hidden;">
+          <div style="display:flex;gap:8px;padding:8px 16px;border-bottom:1px solid var(--border);">
+            <button class="btn-nav header-btn" id="check-conflicts-btn" style="font-size:11px;padding:4px 10px;">检查冲突</button>
+            <button class="btn-nav header-btn" id="import-btn" style="font-size:11px;padding:4px 10px;">导入</button>
+            <button class="btn-nav header-btn" id="export-btn" style="font-size:11px;padding:4px 10px;">导出</button>
+          </div>
+          <div class="workspace">
+            <div class="col col-cats">
+              <div class="col-header">分类列表<button class="header-btn" id="add-category-btn">新建</button></div>
+              <div class="scroll-area" id="category-tree"><div class="placeholder">加载中...</div></div>
+            </div>
+            <div class="col col-list">
+              <div class="col-header">
+                术语明细
+                <div class="header-actions" style="display:flex;gap:8px;">
+                  <button class="header-btn" id="move-selected-btn" style="display:none;">移动到</button>
+                  <button class="header-btn danger" id="delete-selected-btn" style="display:none;">删除所选</button>
+                  <button class="header-btn" id="add-term-btn">新建</button>
+                </div>
+              </div>
+              <div class="scroll-area" id="term-list"><div class="placeholder">请选择一个分类</div></div>
+            </div>
+            <div class="col col-edit">
+              <div class="col-header">详情编辑</div>
+              <div class="scroll-area" id="term-editor"><div class="placeholder">请选择术语进行编辑</div></div>
+            </div>
+          </div>
+
+          <!-- Import Modal -->
+          <div id="import-modal" class="modal-mask">
+            <div class="modal-win">
+              <div class="modal-h">导入术语</div>
+              <div class="form-group"><label class="form-label">选择目标分类</label><select id="import-category-select" class="form-input" style="padding:8px;"></select></div>
+              <div class="form-group">
+                <label class="form-label">选择 CSV 文件</label>
+                <input type="file" id="import-file-input" accept=".csv" class="form-input" style="padding:8px;">
+                <p style="color:var(--text-sub);font-size:12px;margin-top:5px;">格式要求：原文, 译文, 备注(可选)</p>
+              </div>
+              <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px;">
+                <button class="btn-nav" onclick="document.getElementById('import-modal').style.display='none'">取消</button>
+                <button id="confirm-import-btn" class="btn-primary">开始导入</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Conflict Modal -->
+          <div id="conflict-modal" class="modal-mask">
+            <div class="modal-win">
+              <div class="modal-h">发现术语冲突</div>
+              <div id="conflict-list" style="max-height:300px;overflow-y:auto;margin-bottom:20px;border:1px solid var(--border);border-radius:6px;padding:10px;"></div>
+              <div style="display:flex;justify-content:flex-end;gap:10px;">
+                <button class="btn-nav" onclick="document.getElementById('conflict-modal').style.display='none'">暂不处理</button>
+                <button id="confirm-unification-btn" class="btn-primary">统一所选</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Move Modal -->
+          <div id="move-modal" class="modal-mask">
+            <div class="modal-win">
+              <div class="modal-h">移动术语到其他分类</div>
+              <div id="move-term-count" style="color:var(--text-sub);font-size:12px;margin-bottom:10px;"></div>
+              <div class="form-group"><label class="form-label">选择目标分类</label><select id="move-target-category" class="form-input" style="padding:8px;"></select></div>
+              <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px;">
+                <button class="btn-nav" onclick="document.getElementById('move-modal').style.display='none'">取消</button>
+                <button id="confirm-move-btn" class="btn-primary">确认移动</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- New Category Modal -->
+          <div id="new-category-modal" class="modal-mask">
+            <div class="modal-win">
+              <div class="modal-h">新建分类</div>
+              <div class="form-group"><label class="form-label">分类名称</label><input type="text" id="new-category-input" class="form-input" placeholder="请输入分类名称" style="padding:8px;width:100%;box-sizing:border-box;"></div>
+              <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px;">
+                <button class="btn-nav" onclick="document.getElementById('new-category-modal').style.display='none'">取消</button>
+                <button id="confirm-new-category-btn" class="btn-primary">确认创建</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Page: Meetings -->
+      <div class="page" id="page-meetings">
+        <div class="page-header">会议记录 / Meetings</div>
+        <div class="page-content" style="padding:0;overflow:hidden;">
+          <div class="main-container">
+            <div class="meeting-panel">
+              <div class="meeting-panel-header">
+                <span class="meeting-panel-title">最近会议</span>
+                <span class="badge" id="meeting-count">0</span>
+              </div>
+              <div class="meeting-list" id="meeting-list">
+                <div class="empty-list">加载中<span class="loading-dots"></span></div>
+              </div>
+            </div>
+            <div class="detail-panel">
+              <div class="detail-toolbar">
+                <span class="detail-title" id="detail-title">请选择一条会议记录</span>
+                <div class="toolbar-actions" id="toolbar-actions" style="display:none;">
+                  <div class="export-wrap" id="export-wrap">
+                    <button class="btn" onclick="toggleExportMenu()">导出 ▾</button>
+                    <div class="export-menu">
+                      <div class="export-item" onclick="exportMeeting('txt')">📄 TXT</div>
+                      <div class="export-item" onclick="exportMeeting('md')">📝 Markdown</div>
+                    </div>
+                  </div>
+                  <button class="btn btn-danger" onclick="deleteMeeting()">删除</button>
+                </div>
+              </div>
+              <div class="stat-bar" id="stat-bar" style="display:none;">
+                <span>时长：<strong id="stat-duration">-</strong></span>
+                <span>我方条目：<strong id="stat-speak">0</strong></span>
+                <span>对方条目：<strong id="stat-listen">0</strong></span>
+                <span>翻译方向：<strong id="stat-direction">-</strong></span>
+              </div>
+              <div class="transcript-area" id="transcript-area">
+                <div class="detail-empty">
+                  <div class="detail-empty-icon">📋</div>
+                  <div>从左侧选择一条会议记录查看详情</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Page: Settings -->
+      <div class="page" id="page-settings">
+        <div class="page-header">设置 / Settings</div>
+        <div class="page-content">
+          <!-- Account Section -->
+          <div class="form-section">
+            <div class="form-section-title">账户 / Account</div>
+            <div class="form-group">
+              <label class="form-label">VOLCANO_APP_KEY</label>
+              <input id="settings-app-key" type="password" class="form-input" placeholder="输入 API Key" />
+            </div>
+            <div id="settings-status" style="display:none;padding:8px 12px;border-radius:var(--radius-md);font-size:11px;margin-bottom:12px;"></div>
+            <div class="form-group">
+              <button class="btn btn-primary" onclick="saveSettings()">保存 / Save</button>
+            </div>
+          </div>
+
+          <!-- Logs Section -->
+          <div class="form-section">
+            <div class="form-section-title">日志 / Logs</div>
             <div class="logs-toolbar">
               <input type="text" id="search-input" class="form-input" placeholder="搜索日志..." style="flex:1;min-width:0;">
               <select id="channel-filter" class="form-input" style="width:auto;">
                 <option value="all">全部通道</option>
-                <option value="recognize">识别</option>
-                <option value="translate">翻译</option>
-                <option value="audio">音频</option>
+                <option value="speak">我方发言</option>
+                <option value="listen">对方发言</option>
                 <option value="system">系统</option>
               </select>
               <select id="level-filter" class="form-input" style="width:auto;">
@@ -271,18 +448,6 @@
             </div>
             <div id="stats" style="padding:4px 0 8px;font-size:10px;color:var(--text-muted);">共 0 条日志</div>
             <div class="log-container" id="log-container"></div>
-          </div>
-
-          <!-- Account Tab -->
-          <div class="settings-panel" id="settings-account">
-            <div class="form-group">
-              <label class="form-label">VOLCANO_APP_KEY</label>
-              <input id="settings-app-key" type="password" class="form-input" placeholder="输入 API Key" />
-            </div>
-            <div id="settings-status" style="display:none;padding:8px 12px;border-radius:var(--radius-md);font-size:11px;margin-bottom:12px;"></div>
-            <div class="form-group">
-              <button class="btn btn-primary" onclick="saveSettings()">保存 / Save</button>
-            </div>
           </div>
         </div>
       </div>
@@ -301,5 +466,19 @@
   <script src="/static/js/logs.js"></script>
 
   <script>window.__HAS_API_KEY__ = {{ 'true' if has_api_key else 'false' }};</script>
+
+  <script>
+    (function() {
+      var pages = ['translate','session','glossary','meetings','settings'];
+      var hash = window.location.hash.slice(1);
+      var target = pages.indexOf(hash) >= 0 ? hash : 'translate';
+      document.getElementById('page-' + target).classList.add('active');
+      document.querySelectorAll('.sidebar-item').forEach(function(item) {
+        item.classList.toggle('active', item.dataset.page === target);
+      });
+      var s = document.getElementById('noflash');
+      if (s) s.remove();
+    })();
+  </script>
 </body>
 </html>

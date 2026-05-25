@@ -13,20 +13,19 @@
         document.querySelectorAll('.page').forEach(function(page) {
             page.classList.toggle('active', page.id === 'page-' + pageName);
         });
-    };
-
-    window.switchSettingsTab = function(tabName) {
-        document.querySelectorAll('.settings-tab').forEach(function(tab) {
-            tab.classList.toggle('active', tab.dataset.tab === tabName);
-        });
-        document.querySelectorAll('.settings-panel').forEach(function(panel) {
-            panel.classList.toggle('active', panel.id === 'settings-' + tabName);
-        });
+        if (pageName === 'meetings' && window.loadMeetings) {
+            window.loadMeetings();
+        }
+        if (pageName === 'session' && window.loadGlossary) {
+            window.loadGlossary();
+        }
     };
 
     window.openDisplayWindow = function() {
         if (!projectionWindow || projectionWindow.closed) {
-            projectionWindow = window.open('/display', 'projection', 'width=800,height=600');
+            const settings = Storage.get('displayTextSettings', {});
+            const params = buildDisplayUrlParams(settings);
+            projectionWindow = window.open('/display?' + params.toString(), 'projection', 'width=800,height=600');
         } else {
             projectionWindow.focus();
         }
@@ -53,6 +52,9 @@
             var ovMic = document.getElementById('ov-mic');
             if (ovMic) ovMic.textContent = mic.options[mic.selectedIndex]?.text || '未选择';
         }
+        var tts = document.getElementById('tts-enable');
+        var ovTts = document.getElementById('ov-tts');
+        if (ovTts) ovTts.textContent = tts && tts.checked ? '已启用' : '已禁用';
         var hasKey = window.__HAS_API_KEY__;
         var ovApiKey = document.getElementById('ov-apikey');
         if (ovApiKey) ovApiKey.textContent = hasKey ? '✅ 已配置' : '❌ 未配置';
@@ -73,7 +75,7 @@
 
     // 日志存储（带上限）
     let sessionLogs = [];
-    
+    window.__sessionLogs = sessionLogs;
     
     let logWindow = null;
 
@@ -255,6 +257,7 @@
         sessionLogs.push(logData);
         if (sessionLogs.length > CONFIG.MAX_TOTAL_LOGS) {
             sessionLogs = sessionLogs.slice(-MAX_TOTAL_LOGS);
+            window.__sessionLogs = sessionLogs;
         }
 
         // 渲染到侧边栏
@@ -305,7 +308,6 @@
 
     window.openFullLogs = function() {
         switchPage('settings');
-        switchSettingsTab('logs');
     };
 
 
@@ -313,6 +315,7 @@
     // 清理日志（会话停止时调用）
     function clearLogs() {
         sessionLogs = [];
+        window.__sessionLogs = sessionLogs;
         renderSidebarLogs();
         const container = document.getElementById('log-content');
         if (container) {
@@ -330,6 +333,7 @@
             }
         }
     }
+    window.clearLogs = clearLogs;
 
     function checkStartButtonState() {
         const btn = document.getElementById('startBtn');
@@ -343,6 +347,21 @@
     }
 
     // --- 术语库 ---
+    function updateGlossaryOverview() {
+        const checked = document.querySelectorAll('#glossary-list-area .glossary-item input:checked');
+        const ovEl = document.getElementById('ov-glossary');
+        if (!ovEl) return;
+        if (checked.length === 0) {
+            ovEl.textContent = '未选择';
+        } else {
+            const names = Array.from(checked).map(function(cb) {
+                var parent = cb.closest('.glossary-item');
+                return parent ? (parent.querySelector('.glossary-text')?.textContent || cb.value) : cb.value;
+            });
+            ovEl.textContent = names.join('、');
+        }
+    }
+
     async function loadGlossary() {
         try {
             const res = await fetch('/api/glossary/categories');
@@ -354,8 +373,10 @@
             const publicCats = data.filter(c => c.is_public);
             const renderItem = (cat, type) => {
                 const div = document.createElement('div'); div.className = 'glossary-item';
-                div.innerHTML = `<input type="checkbox" value="${cat.id}"><span class="glossary-text">${cat.name}</span><span class="glossary-tag">${type}</span>`;
-                div.onclick = (e) => { if (e.target.tagName !== 'INPUT') div.querySelector('input').click(); };
+                div.innerHTML = '<input type="checkbox" value="' + cat.id + '"><span class="glossary-text">' + cat.name + '</span><span class="glossary-tag">' + type + '</span>';
+                var checkbox = div.querySelector('input');
+                checkbox.addEventListener('change', updateGlossaryOverview);
+                div.onclick = (e) => { if (e.target.tagName !== 'INPUT') checkbox.click(); };
                 list.appendChild(div);
             };
             privateCats.forEach(c => renderItem(c, '私有 Private'));
@@ -364,8 +385,10 @@
             }
             publicCats.forEach(c => renderItem(c, '通用 Public'));
             if (data.length === 0) list.innerHTML = '<div style="text-align:center;padding:10px;color:#666;font-size:12px;">暂无术语库 / No Glossary</div>';
+            updateGlossaryOverview();
         } catch (e) { console.error('Glossary Error', e); }
     }
+    window.loadGlossary = loadGlossary;
 
     // --- 显示设置配置 ---
     const defaultDisplaySettings = {
@@ -590,6 +613,7 @@
 
         // 显示/隐藏音色设置说明文字
         toggleClass('voice-hint', 'hidden', !enabled);
+        updateConfigOverview();
     };
 
     // --- 音频帮助和虚拟声卡状态 ---
@@ -720,6 +744,9 @@
             if (cabB) { virtualCables.cableB_Output_Id = cabB.deviceId; statusB.innerText = cabB.label; statusB.className = is16ch(cabB.label) ? 'isb-val warn' : 'isb-val ok'; }
             else { statusB.innerText = '未检测到 / Not Found'; statusB.className = 'isb-val err'; }
         } catch (e) { console.error(e); }
+    }
+    if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) {
+        navigator.mediaDevices.addEventListener('devicechange', () => { initDevices(); });
     }
 
     // --- 语言对校验 ---
@@ -1122,6 +1149,12 @@
         document.getElementById('lang-their-hear')?.addEventListener('change', updateConfigOverview);
         document.getElementById('channel-mode')?.addEventListener('change', updateConfigOverview);
         document.getElementById('dev-real-mic')?.addEventListener('change', updateConfigOverview);
+
+        // Navigate to page from hash (e.g. /#settings from standalone pages)
+        var hash = window.location.hash.slice(1);
+        if (hash && ['translate', 'session', 'glossary', 'meetings', 'settings'].indexOf(hash) >= 0) {
+            switchPage(hash);
+        }
     });
 
     window.saveSettings = async function() {

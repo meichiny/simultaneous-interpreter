@@ -67,8 +67,8 @@
     }
 
     function refreshLogsInline() {
-        if (window.sessionLogs && window.sessionLogs.length !== allLogs.length) {
-            allLogs = [...window.sessionLogs];
+        if (window.__sessionLogs && window.__sessionLogs.length !== allLogs.length) {
+            allLogs = [...window.__sessionLogs];
             filterLogs();
         }
     }
@@ -104,10 +104,22 @@
 
     function renderLogs() {
         const container = document.getElementById('log-container');
-        const logsToRender = filteredLogs.length > 0 ? filteredLogs : allLogs;
 
-        if (logsToRender.length === 0) {
+        if (allLogs.length === 0) {
             container.innerHTML = '<div class="no-logs">暂无日志 / No logs available<br><small>等待日志同步...</small></div>';
+            return;
+        }
+
+        // When filters are active but no logs match, show no-match message
+        const hasActiveFilter = document.getElementById('search-input').value ||
+                                document.getElementById('channel-filter').value !== 'all' ||
+                                document.getElementById('level-filter').value !== 'all';
+
+        const logsToRender = filteredLogs.length > 0 ? filteredLogs :
+                             (hasActiveFilter ? null : allLogs);
+
+        if (logsToRender === null) {
+            container.innerHTML = '<div class="no-logs">无匹配日志 / No matching logs<br><small>尝试调整筛选条件</small></div>';
             return;
         }
 
@@ -191,9 +203,11 @@
             }
         }
 
-        if (window.sessionLogs) {
-            window.sessionLogs = [];
-            if (window.clearLogs) window.clearLogs();
+        if (window.__sessionLogs) {
+            window.__sessionLogs.length = 0;
+            if (window.clearLogs) {
+                window.clearLogs();
+            }
         }
 
         renderLogs();
