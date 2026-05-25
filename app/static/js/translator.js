@@ -5,6 +5,61 @@
 (function() {
     'use strict';
 
+    // --- Sidebar Navigation ---
+    window.switchPage = function(pageName) {
+        document.querySelectorAll('.sidebar-item').forEach(function(item) {
+            item.classList.toggle('active', item.dataset.page === pageName);
+        });
+        document.querySelectorAll('.page').forEach(function(page) {
+            page.classList.toggle('active', page.id === 'page-' + pageName);
+        });
+        if (pageName === 'meetings' && window.loadMeetings) {
+            window.loadMeetings();
+        }
+        if (pageName === 'session' && window.loadGlossary) {
+            window.loadGlossary();
+        }
+    };
+
+    window.openDisplayWindow = function() {
+        if (!projectionWindow || projectionWindow.closed) {
+            const settings = Storage.get('displayTextSettings', {});
+            const params = buildDisplayUrlParams(settings);
+            projectionWindow = window.open('/display?' + params.toString(), 'projection', 'width=800,height=600');
+        } else {
+            projectionWindow.focus();
+        }
+    };
+
+    function updateConfigOverview() {
+        var mySpeak = document.getElementById('lang-my-speak');
+        var theirHear = document.getElementById('lang-their-hear');
+        if (mySpeak && theirHear) {
+            var ovLang = document.getElementById('ov-language');
+            if (ovLang) {
+                ovLang.textContent =
+                    (mySpeak.options[mySpeak.selectedIndex]?.text.split(' ')[0] || '?') + ' → ' +
+                    (theirHear.options[theirHear.selectedIndex]?.text.split(' ')[0] || '?');
+            }
+        }
+        var channelMode = document.getElementById('channel-mode');
+        if (channelMode) {
+            var ovChannel = document.getElementById('ov-channel');
+            if (ovChannel) ovChannel.textContent = channelMode.value === 'single' ? '单通道' : '双通道';
+        }
+        var mic = document.getElementById('dev-real-mic');
+        if (mic && mic.value) {
+            var ovMic = document.getElementById('ov-mic');
+            if (ovMic) ovMic.textContent = mic.options[mic.selectedIndex]?.text || '未选择';
+        }
+        var tts = document.getElementById('tts-enable');
+        var ovTts = document.getElementById('ov-tts');
+        if (ovTts) ovTts.textContent = tts && tts.checked ? '已启用' : '已禁用';
+        var hasKey = window.__HAS_API_KEY__;
+        var ovApiKey = document.getElementById('ov-apikey');
+        if (ovApiKey) ovApiKey.textContent = hasKey ? '✅ 已配置' : '❌ 未配置';
+    }
+
     // --- 平台检测 ---
     (function detectPlatform() {
         const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
@@ -20,7 +75,7 @@
 
     // 日志存储（带上限）
     let sessionLogs = [];
-    
+    window.__sessionLogs = sessionLogs;
     
     let logWindow = null;
 
@@ -162,23 +217,23 @@
     // --- 状态更新 ---
     function updateStatus(state, text) {
         const color = state === 'error' ? 'var(--status-red)' : state === 'warn' ? 'var(--status-yellow)' : 'var(--status-green)';
-        const dot = document.getElementById('dash-status-dot');
-        const txt = document.getElementById('connectionStatus');
-        const actDot = document.getElementById('act-status-dot');
-        const actTxt = document.getElementById('act-status-text');
+        const dot = document.getElementById('run-status-dot');
+        const txt = document.getElementById('run-status-text');
         if (dot) dot.style.background = color;
         if (txt) { txt.innerText = text; txt.style.color = state === 'connected' ? 'var(--status-green)' : state === 'warn' ? 'var(--status-yellow)' : '#666'; }
-        if (actDot) actDot.style.background = color;
-        if (actTxt) actTxt.innerText = state === 'error' ? '离线 / Offline' : state === 'warn' ? '重连 / Retry...' : '就绪 / Ready';
+        const ovServer = document.getElementById('ov-server');
+        if (ovServer) {
+            const ovDot = ovServer.querySelector('.status-dot');
+            if (ovDot) ovDot.style.background = color;
+            ovServer.innerHTML = '<span class="status-dot ' + (state === 'error' ? 'red' : state === 'warn' ? 'yellow' : 'green') + '" style="display:inline-block;margin-right:6px;vertical-align:middle"></span>' + (state === 'error' ? '离线 / Offline' : state === 'warn' ? '重连 / Retry...' : '在线 / Online');
+        }
     }
 
     function updateLatencyUI(ms) {
         currentLatency = ms;
         const color = ms < 150 ? 'var(--status-green)' : ms > 300 ? 'var(--status-red)' : '#666';
-        const el1 = document.getElementById('networkLatency');
-        const el2 = document.getElementById('act-latency');
-        if (el1) { el1.innerText = ms + ' ms'; el1.style.color = color; }
-        if (el2) { el2.innerText = ms + ' ms'; el2.style.color = color; }
+        const el = document.getElementById('run-latency');
+        if (el) { el.innerText = ms + ' ms'; el.style.color = color; }
         checkStartButtonState();
     }
 
@@ -186,17 +241,13 @@
     function updateBillingUI(data) {
         console.log('[Billing] 收到 billing_update:', data);
         const totalTokens = data.total_tokens || 0;
-        const el = document.getElementById('act-billing');
+        const el = document.getElementById('run-billing');
         if (el) {
-            // 格式化显示：超过1000显示为 x.xk
             if (totalTokens >= 1000) {
                 el.innerText = (totalTokens / 1000).toFixed(1) + 'k tokens';
             } else {
                 el.innerText = totalTokens + ' tokens';
             }
-            console.log('[Billing] UI 已更新:', el.innerText);
-        } else {
-            console.warn('[Billing] 未找到 act-billing 元素');
         }
     }
 
@@ -206,6 +257,7 @@
         sessionLogs.push(logData);
         if (sessionLogs.length > CONFIG.MAX_TOTAL_LOGS) {
             sessionLogs = sessionLogs.slice(-MAX_TOTAL_LOGS);
+            window.__sessionLogs = sessionLogs;
         }
 
         // 渲染到侧边栏
@@ -254,61 +306,16 @@
         container.scrollTop = container.scrollHeight;
     }
 
-    function openFullLogs() {
-        // 如果窗口已存在且未关闭，则聚焦
-        if (logWindow && !logWindow.closed) {
-            logWindow.focus();
-            // 发送当前日志
-            logWindow.postMessage({
-                type: 'initLogs',
-                logs: sessionLogs
-            }, '*');
-            return;
-        }
-
-        // 打开新窗口查看完整日志
-        logWindow = window.open('/logs', 'fullLogs', 'width=900,height=700,scrollbars=yes');
-        if (logWindow) {
-            // 等待新窗口加载完成后发送日志
-            const sendLogs = () => {
-                try {
-                    logWindow.postMessage({
-                        type: 'initLogs',
-                        logs: sessionLogs
-                    }, '*');
-                } catch (e) {
-                    console.error('发送日志到新窗口失败:', e);
-                }
-            };
-            // 延迟发送确保窗口已加载
-            setTimeout(sendLogs, 500);
-        }
-    }
-
-    // 暴露到全局
-    window.openFullLogs = openFullLogs;
-
-    // 日志侧边栏展开/收起
-    window.toggleLogSidebar = function() {
-        const sidebar = document.getElementById('log-sidebar');
-        const toggleBtn = document.getElementById('log-toggle-btn');
-        if (!sidebar || !toggleBtn) return;
-
-        const isVisible = sidebar.classList.contains('visible');
-        if (isVisible) {
-            sidebar.classList.remove('visible');
-            toggleBtn.style.display = 'block';
-        } else {
-            sidebar.classList.add('visible');
-            toggleBtn.style.display = 'none';
-            // 重新渲染确保显示最新日志
-            renderSidebarLogs();
-        }
+    window.openFullLogs = function() {
+        switchPage('settings');
     };
+
+
 
     // 清理日志（会话停止时调用）
     function clearLogs() {
         sessionLogs = [];
+        window.__sessionLogs = sessionLogs;
         renderSidebarLogs();
         const container = document.getElementById('log-content');
         if (container) {
@@ -326,6 +333,7 @@
             }
         }
     }
+    window.clearLogs = clearLogs;
 
     function checkStartButtonState() {
         const btn = document.getElementById('startBtn');
@@ -339,6 +347,21 @@
     }
 
     // --- 术语库 ---
+    function updateGlossaryOverview() {
+        const checked = document.querySelectorAll('#glossary-list-area .glossary-item input:checked');
+        const ovEl = document.getElementById('ov-glossary');
+        if (!ovEl) return;
+        if (checked.length === 0) {
+            ovEl.textContent = '未选择';
+        } else {
+            const names = Array.from(checked).map(function(cb) {
+                var parent = cb.closest('.glossary-item');
+                return parent ? (parent.querySelector('.glossary-text')?.textContent || cb.value) : cb.value;
+            });
+            ovEl.textContent = names.join('、');
+        }
+    }
+
     async function loadGlossary() {
         try {
             const res = await fetch('/api/glossary/categories');
@@ -350,8 +373,10 @@
             const publicCats = data.filter(c => c.is_public);
             const renderItem = (cat, type) => {
                 const div = document.createElement('div'); div.className = 'glossary-item';
-                div.innerHTML = `<input type="checkbox" value="${cat.id}"><span class="glossary-text">${cat.name}</span><span class="glossary-tag">${type}</span>`;
-                div.onclick = (e) => { if (e.target.tagName !== 'INPUT') div.querySelector('input').click(); };
+                div.innerHTML = '<input type="checkbox" value="' + cat.id + '"><span class="glossary-text">' + cat.name + '</span><span class="glossary-tag">' + type + '</span>';
+                var checkbox = div.querySelector('input');
+                checkbox.addEventListener('change', updateGlossaryOverview);
+                div.onclick = (e) => { if (e.target.tagName !== 'INPUT') checkbox.click(); };
                 list.appendChild(div);
             };
             privateCats.forEach(c => renderItem(c, '私有 Private'));
@@ -360,8 +385,10 @@
             }
             publicCats.forEach(c => renderItem(c, '通用 Public'));
             if (data.length === 0) list.innerHTML = '<div style="text-align:center;padding:10px;color:#666;font-size:12px;">暂无术语库 / No Glossary</div>';
+            updateGlossaryOverview();
         } catch (e) { console.error('Glossary Error', e); }
     }
+    window.loadGlossary = loadGlossary;
 
     // --- 显示设置配置 ---
     const defaultDisplaySettings = {
@@ -523,18 +550,11 @@
 
     // 显示/隐藏运行中状态
     function showRunningState(running) {
-        const indicator = document.getElementById('running-indicator');
         const startBtn = document.getElementById('startBtn');
-        const stopBtn = document.getElementById('stopBtn');
-
         if (running) {
-            if (indicator) indicator.style.display = 'flex';
             if (startBtn) startBtn.style.display = 'none';
-            if (stopBtn) stopBtn.style.display = 'block';
         } else {
-            if (indicator) indicator.style.display = 'none';
             if (startBtn) startBtn.style.display = 'block';
-            if (stopBtn) stopBtn.style.display = 'none';
         }
     }
 
@@ -566,33 +586,18 @@
     }
 
     window.onChannelModeChange = function() {
-        const mode = document.getElementById('channel-mode').value;
-        const isDual = mode === 'dual';
-
-        // 显示/隐藏双通道相关元素
-        const routingBox = document.getElementById('routing-check-box');
-        const speakerGroup = document.getElementById('speaker-output-group');
-        const theirSpeakBlock = document.querySelector('#lang-their-speak')?.closest('.lang-block');
-
-        if (routingBox) routingBox.style.display = isDual ? 'block' : 'none';
-        if (speakerGroup) speakerGroup.style.display = isDual ? 'block' : 'none';
-
-        // 切换语言配置显示
-        if (theirSpeakBlock) {
-            theirSpeakBlock.style.display = isDual ? 'block' : 'none';
+        var mode = document.getElementById('channel-mode').value;
+        var container = document.getElementById('translation-container');
+        if (container) {
+            container.classList.toggle('single-channel', mode === 'single');
         }
-
-        // 显示/隐藏单/双通道提示框
-        toggleClass('single-channel-tip', 'hidden', isDual);
-        toggleClass('dual-channel-tip', 'hidden', !isDual);
-
-        // 双通道模式下更新虚拟声卡检测状态
-        if (isDual) {
-            updateCableStatus();
-        }
-
-        // 保存配置到 session
-        SessionStorage.set('channelMode', mode);
+        var singleTip = document.getElementById('single-channel-tip');
+        var dualTip = document.getElementById('dual-channel-tip');
+        var spkGroup = document.getElementById('speaker-output-group');
+        if (singleTip) singleTip.style.display = mode === 'single' ? 'block' : 'none';
+        if (dualTip) dualTip.style.display = mode === 'dual' ? 'block' : 'none';
+        if (spkGroup) spkGroup.style.display = mode === 'dual' ? 'block' : 'none';
+        updateConfigOverview();
     };
 
     window.onTtsToggle = function() {
@@ -608,6 +613,7 @@
 
         // 显示/隐藏音色设置说明文字
         toggleClass('voice-hint', 'hidden', !enabled);
+        updateConfigOverview();
     };
 
     // --- 音频帮助和虚拟声卡状态 ---
@@ -739,6 +745,9 @@
             else { statusB.innerText = '未检测到 / Not Found'; statusB.className = 'isb-val err'; }
         } catch (e) { console.error(e); }
     }
+    if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) {
+        navigator.mediaDevices.addEventListener('devicechange', () => { initDevices(); });
+    }
 
     // --- 语言对校验 ---
     function validateLanguagePair(src, dst) {
@@ -806,33 +815,22 @@
             if (ctxSpeak.state === 'suspended') await ctxSpeak.resume();
             if (ctxListen.state === 'suspended') await ctxListen.resume();
 
-            document.getElementById('section-dashboard').style.display = 'none';
-            document.getElementById('section-action').style.display = 'flex';
-
-            // 根据模式设置 action-body 类
-            const actionBody = document.querySelector('.action-body');
-            if (actionBody) {
-                if (hasCableB) {
-                    actionBody.classList.remove('single-channel');
-                } else {
-                    actionBody.classList.add('single-channel');
-                }
-            }
+            document.getElementById('translate-stopped').style.display = 'none';
+            document.getElementById('translate-running').style.display = 'flex';
 
             // 应用显示设置到内嵌界面
             applyDisplaySettingsToEmbedded();
 
             // 根据模式显示/隐藏 listen 面板
-            const abListen = document.getElementById('ab-listen');
-            const abSpeak = document.getElementById('ab-speak');
-            if (abListen) {
-                abListen.style.display = hasCableB ? 'flex' : 'none';
+            const paneListen = document.getElementById('pane-listen');
+            const paneSpeak = document.getElementById('pane-speak');
+            if (paneListen) {
+                paneListen.style.display = hasCableB ? 'flex' : 'none';
             }
-            if (abSpeak) {
-                abSpeak.style.flex = hasCableB ? '1' : '1';
-                // 单通道模式下占据全宽
-                if (!hasCableB && abListen) {
-                    abSpeak.style.width = '100%';
+            if (paneSpeak) {
+                paneSpeak.style.flex = hasCableB ? '1' : '1';
+                if (!hasCableB && paneListen) {
+                    paneSpeak.style.width = '100%';
                 }
             }
 
@@ -889,18 +887,12 @@
             if (paneT && pT) { paneT.innerHTML = ''; paneT.appendChild(pT); pT.innerText = '...'; }
             if (paneO && pO) { paneO.innerHTML = ''; paneO.appendChild(pO); pO.innerText = 'Ready'; }
         });
-        document.getElementById('section-action').style.display = 'none';
-        document.getElementById('section-dashboard').style.display = 'flex';
-        const al = document.getElementById('ab-listen');
+        document.getElementById('translate-running').style.display = 'none';
+        document.getElementById('translate-stopped').style.display = 'block';
+        const al = document.getElementById('pane-listen');
         if (al) al.style.display = 'flex';
 
-        // 重置 action-body 类
-        const actionBody = document.querySelector('.action-body');
-        if (actionBody) {
-            actionBody.classList.remove('single-channel');
-        }
-
-        // 隐藏运行中状态（新窗口模式）
+        // 隐藏运行中状态
         showRunningState(false);
 
         // 清理日志
@@ -1008,9 +1000,9 @@
 
     function refreshBorderUI(prefix) {
         const st = borderStates[prefix];
-        const box = document.getElementById(prefix === 'speak' ? 'ab-speak' : 'ab-listen');
+        const box = document.getElementById(prefix === 'speak' ? 'pane-speak' : 'pane-listen');
         if (!box) return;
-        const tag = box.querySelector('.ab-tag');
+        const tag = box.querySelector('.pane-tag');
         box.classList.remove('active-green', 'active-yellow');
         if (st.input || st.output) {
             box.classList.add('active-green'); if (tag) tag.style.opacity = 1;
@@ -1020,50 +1012,7 @@
 
     // scheduleBuffer 已被 AudioWorklet 替代
 
-    // --- 投影屏功能 ---
-    window.openDisplayWindow = function() {
-        if (isWindowValid(projectionWindow)) {
-            projectionWindow.focus();
-            return;
-        }
-        // 从 localStorage 读取配置页的显示设置
-        const savedSettings = Storage.get('displayTextSettings', {});
-        const params = buildDisplayUrlParams(savedSettings);
 
-        const url = '/display?' + params.toString();
-        projectionWindow = window.open(url, 'projectionScreen', 'width=900,height=700,location=no,menubar=no,toolbar=no');
-
-        // 发送初始设置
-        if (projectionWindow) {
-            setTimeout(() => {
-                if (isWindowValid(projectionWindow)) {
-                    projectionWindow.postMessage({
-                        type: 'settings',
-                        settings: {
-                            fontSize: savedSettings.fontSize,
-                            transColor: savedSettings.transColor,
-                            origColor: savedSettings.origColor,
-                            bgColor: savedSettings.bgColor
-                        }
-                    }, window.location.origin);
-                    projectionWindow.postMessage({ type: 'connected' }, window.location.origin);
-                }
-            }, 500);
-        }
-
-        // 启动心跳检测（每2秒发送一次）
-        if (intervalIds.projectionHeartbeat) {
-            clearInterval(intervalIds.projectionHeartbeat);
-        }
-        intervalIds.projectionHeartbeat = setInterval(() => {
-            if (isWindowValid(projectionWindow)) {
-                projectionWindow.postMessage({ type: 'heartbeat' }, window.location.origin);
-            } else {
-                clearInterval(intervalIds.projectionHeartbeat);
-                intervalIds.projectionHeartbeat = null;
-            }
-        }, CONFIG.PING_INTERVAL);
-    };
 
     // --- 字幕更新 ---
     function updateText(prefix, data) {
@@ -1145,7 +1094,10 @@
         socket.on('log_update', d => addLog(d));
 
         intervalIds.ping = setInterval(() => { if (socket.connected) socket.emit('ping_from_client', { t: Date.now() }); }, CONFIG.PING_INTERVAL);
-        if (socket.connected) updateStatus('connected', '服务已连接 / Service Connected');
+        if (socket.connected) {
+            updateStatus('connected', '服务已连接 / Service Connected');
+            checkStartButtonState();
+        }
     }
 
     // --- 语言联动：根据源语言禁用不合法的目标选项 ---
@@ -1187,25 +1139,23 @@
     // --- DOMContentLoaded ---
     document.addEventListener('DOMContentLoaded', async () => {
         initLangSync();
-        initConfigUI(); // 初始化通道模式和 TTS 配置
+        initConfigUI();
         try { await navigator.mediaDevices.getUserMedia({ audio: true }); } catch (e) { alert('请允许麦克风权限 / Please Allow Mic Permission'); }
         await initDevices();
         loadGlossary();
         bindSocketEvents();
-        if (!window.__HAS_API_KEY__) {
-            showSettingsModal();
+        updateConfigOverview();
+        document.getElementById('lang-my-speak')?.addEventListener('change', updateConfigOverview);
+        document.getElementById('lang-their-hear')?.addEventListener('change', updateConfigOverview);
+        document.getElementById('channel-mode')?.addEventListener('change', updateConfigOverview);
+        document.getElementById('dev-real-mic')?.addEventListener('change', updateConfigOverview);
+
+        // Navigate to page from hash (e.g. /#settings from standalone pages)
+        var hash = window.location.hash.slice(1);
+        if (hash && ['translate', 'session', 'glossary', 'meetings', 'settings'].indexOf(hash) >= 0) {
+            switchPage(hash);
         }
     });
-
-    // --- Settings modal (API Key) ---
-    window.showSettingsModal = function() {
-        document.getElementById('settings-modal').style.display = 'flex';
-    };
-
-    window.hideSettingsModal = function() {
-        document.getElementById('settings-modal').style.display = 'none';
-        document.getElementById('settings-status').style.display = 'none';
-    };
 
     window.saveSettings = async function() {
         const appKey = document.getElementById('settings-app-key').value.trim();
@@ -1218,6 +1168,10 @@
             return;
         }
 
+        statusEl.className = 'tip-box';
+        statusEl.textContent = '验证中... / Testing...';
+        statusEl.style.display = 'block';
+
         try {
             const res = await fetch('/api/save_env', {
                 method: 'POST',
@@ -1226,9 +1180,16 @@
             });
             const data = await res.json();
             if (data.success) {
-                statusEl.className = 'tip-box tip-success';
-                statusEl.textContent = '保存成功，密钥已生效';
+                window.__HAS_API_KEY__ = data.valid;
+                if (data.valid) {
+                    statusEl.className = 'tip-box tip-success';
+                    statusEl.textContent = '保存成功，密钥有效';
+                } else {
+                    statusEl.className = 'tip-box tip-warning';
+                    statusEl.textContent = '保存成功，但连接测试失败：' + (data.message || '未知错误');
+                }
                 statusEl.style.display = 'block';
+                updateConfigOverview();
             } else {
                 statusEl.className = 'tip-box tip-warning';
                 statusEl.textContent = '保存失败：' + (data.error || '未知错误');
