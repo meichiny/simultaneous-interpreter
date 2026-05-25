@@ -25,6 +25,10 @@ electron/resources/server/
 # Electron 构建产物
 electron/dist/
 
+# opencode 内部工作文件
+.opencode/
+.superpowers/
+
 # 本地说明文档和安装脚本（供同事参考，无需同步远程）
 使用说明.md
 docs/images/usage-*.png
