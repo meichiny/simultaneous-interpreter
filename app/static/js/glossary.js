@@ -2,15 +2,16 @@
 // 术语管理页业务逻辑
 // ===========================================
 document.addEventListener('DOMContentLoaded', () => {
+    // Guard: only run on standalone glossary page
+    if (!document.getElementById('category-tree')) {
+        return;
+    }
     const targetUserId = '';
     const appendQuery = (url) => url;
 
-    // 返回按钮
-    (function() {
-        const btn = document.getElementById('back-btn');
-        btn.textContent = "← 返回";
-        btn.href = '/';
-    })();
+    // 返回按钮（sidebar 已提供导航，保留兼容）
+    var backBtn = document.getElementById('back-btn');
+    if (backBtn) { backBtn.textContent = "← 返回"; backBtn.href = '/'; }
 
     // 导出逻辑
     document.getElementById('export-btn').onclick = async () => {

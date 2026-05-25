@@ -2,9 +2,12 @@
 let currentMeetingId = null;
 
 document.addEventListener('DOMContentLoaded', () => {
-    const backBtn = document.getElementById('back-btn');
-    backBtn.href = '/';
-    backBtn.textContent = '← 返回';
+    // Guard: only run on standalone meetings page
+    if (!document.getElementById('meeting-list')) {
+        return;
+    }
+    var backBtn = document.getElementById('back-btn');
+    if (backBtn) { backBtn.href = '/'; backBtn.textContent = '← 返回'; }
 
     loadMeetings();
     document.addEventListener('click', (e) => {

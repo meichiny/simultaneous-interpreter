@@ -1,8 +1,41 @@
 import os
+import uuid
+import requests
 
 from flask import Blueprint, render_template, request, jsonify
 from app.config import basedir, Config
 from app.models import TermCategory
+
+
+WS_TEST_URL = "https://openspeech.bytedance.com/api/v4/ast/v2/translate"
+WS_TEST_TIMEOUT = 10
+
+
+def _test_app_key(app_key):
+    headers = {
+        "X-Api-Key": app_key,
+        "X-Api-Resource-Id": "volc.service_type.10053",
+        "X-Api-Connect-Id": str(uuid.uuid4()),
+    }
+    try:
+        resp = requests.get(WS_TEST_URL, headers=headers, timeout=WS_TEST_TIMEOUT, allow_redirects=False)
+        code = resp.status_code
+        if code == 101:
+            return True, "密钥有效，服务连接成功"
+        elif code in (401, 403):
+            return False, "密钥无效（请检查 API Key 是否正确）"
+        elif code == 400:
+            # 400 通常表示请求格式不对但鉴权已过
+            return True, "密钥有效，服务连接成功"
+        else:
+            return False, f"服务返回异常状态 ({code})"
+    except requests.exceptions.ConnectTimeout:
+        return False, "连接超时（请检查网络连接）"
+    except requests.exceptions.ConnectionError:
+        return False, "无法连接到翻译服务（请检查网络连接）"
+    except Exception as e:
+        return False, f"验证异常: {str(e)[:80]}"
+
 
 main_bp = Blueprint('main', __name__)
 
@@ -57,4 +90,12 @@ def save_env():
     os.environ.pop('VOLCANO_ACCESS_KEY', None)
     Config.VOLCANO_APP_KEY = app_key
 
-    return jsonify({'success': True})
+    # 连接测试：验证密钥有效性
+    valid, test_message = _test_app_key(app_key)
+
+    return jsonify({
+        'success': True,
+        'valid': valid,
+        'connected': valid,
+        'message': test_message,
+    })

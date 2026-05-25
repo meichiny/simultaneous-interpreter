@@ -22,7 +22,40 @@
             background-color: var(--bg-color);
             color: var(--text-color);
             overflow: hidden;
+            -webkit-app-region: drag;
         }
+
+        .window-controls {
+            position: fixed;
+            top: 8px;
+            left: 8px;
+            display: flex;
+            gap: 8px;
+            z-index: 9999;
+            opacity: 0;
+            transition: opacity 0.25s;
+            -webkit-app-region: no-drag;
+        }
+        body:hover .window-controls { opacity: 1; }
+        .window-controls button {
+            width: 12px; height: 12px;
+            border: none; border-radius: 50%;
+            cursor: pointer;
+            position: relative;
+            transition: filter 0.15s;
+        }
+        .window-controls button::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            border-radius: 50%;
+            opacity: 0;
+            transition: opacity 0.15s;
+        }
+        .window-controls button:hover { filter: brightness(1.2); }
+        .btn-close    { background: #ff5f57; border: 1px solid #e2463f; }
+        .btn-minimize { background: #febc2e; border: 1px solid #e5a023; }
+        .btn-fullscreen { background: #28c840; border: 1px solid #20aa34; }
 
         .container {
             height: 100%;
@@ -104,6 +137,11 @@
     </style>
 </head>
 <body>
+    <div class="window-controls" id="windowControls">
+        <button class="btn-close" onclick="window.close()" title="关闭"></button>
+        <button class="btn-minimize" onclick="minimizeWindow()" title="最小化"></button>
+        <button class="btn-fullscreen" onclick="toggleFullscreen()" title="全屏"></button>
+    </div>
     <div class="status-bar" id="statusBar">等待连接...</div>
 
     <div class="container">
@@ -120,9 +158,32 @@
     <script>
         // 投影屏逻辑：仅接收主窗口 postMessage 并显示
         (function() {
+            const isElectron = navigator.userAgent.toLowerCase().includes('electron');
             const contentTop = document.getElementById('contentTop');
             const contentBottom = document.getElementById('contentBottom');
             const statusBar = document.getElementById('statusBar');
+            const controls = document.getElementById('windowControls');
+
+            // 暴露到全局供 onclick 调用
+            window.toggleFullscreen = function() {
+                if (!document.fullscreenElement) {
+                    document.documentElement.requestFullscreen().catch(function(){});
+                } else {
+                    document.exitFullscreen().catch(function(){});
+                }
+            };
+            window.minimizeWindow = function() {
+                if (window.electronAPI && window.electronAPI.minimizeWindow) {
+                    window.electronAPI.minimizeWindow();
+                } else {
+                    window.close();
+                }
+            };
+            // Listen for keyboard shortcuts (F, F11, Esc)
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'f' || e.key === 'F11') { e.preventDefault(); toggleFullscreen(); }
+                if (e.key === 'Escape' && document.fullscreenElement) { document.exitFullscreen().catch(() => {}); }
+            });
 
             // 显示连接状态
             function showStatus(text, isError) {
@@ -339,31 +400,32 @@
                     }
                 });
 
-                // 检测 opener 是否关闭或不存在
-                setInterval(() => {
-                    // 如果 opener 已关闭或不存在，直接关闭窗口
+                // Regularly check if main window is still alive
+                setInterval(function() {
+                    if (isElectron) return; // Electron manages lifecycle via parent window
                     if (!window.opener || window.opener.closed) {
                         showStatus('控制台已关闭，即将退出...', true);
-                        setTimeout(() => window.close(), 2000);
+                        setTimeout(function() { window.close(); }, 2000);
                         return;
                     }
-                    // 收到过心跳后，检测心跳超时
                     if (hasReceivedHeartbeat && Date.now() - lastHeartbeat > HEARTBEAT_TIMEOUT) {
                         showStatus('控制台已关闭，即将退出...', true);
-                        setTimeout(() => window.close(), 2000);
+                        setTimeout(function() { window.close(); }, 2000);
                     }
                 }, 1000);
 
-                // 定期发送心跳到主窗口
-                setInterval(() => {
-                    if (window.opener && !window.opener.closed) {
-                        try {
-                            window.opener.postMessage({ type: 'ping', from: 'projection' }, '*');
-                        } catch (e) {
-                            // 跨域错误，忽略
+                // 定期发送心跳到主窗口（仅非 Electron 模式）
+                if (!isElectron) {
+                    setInterval(() => {
+                        if (window.opener && !window.opener.closed) {
+                            try {
+                                window.opener.postMessage({ type: 'ping', from: 'projection' }, '*');
+                            } catch (e) {
+                                // 跨域错误，忽略
+                            }
                         }
-                    }
-                }, 2000);
+                    }, 2000);
+                }
             }
         })();
     </script>

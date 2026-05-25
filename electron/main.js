@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu, dialog } = require('electron');
+const { app, BrowserWindow, Menu, dialog, ipcMain } = require('electron');
 const { spawn } = require('child_process');
 const path = require('path');
 const http = require('http');
@@ -123,9 +123,11 @@ function createWindow() {
     width: 1280, height: 800,
     minWidth: 900, minHeight: 600,
     title: '同声传译',
+    titleBarStyle: 'hiddenInset',
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
+      nativeWindowOpen: true,
       preload: path.join(__dirname, 'preload.js'),
     },
     show: false,
@@ -135,6 +137,35 @@ function createWindow() {
 
   mainWindow.once('ready-to-show', () => mainWindow.show());
   mainWindow.on('closed', () => { mainWindow = null; });
+
+  // IPC: minimize a frameless window
+  ipcMain.on('window-minimize', (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (win) win.minimize();
+  });
+
+  // Intercept window.open for projection screen — use a frameless native window
+  mainWindow.webContents.setWindowOpenHandler(({ url, frameName }) => {
+    if (frameName === 'projection') {
+      return {
+        action: 'allow',
+        overrideBrowserWindowOptions: {
+          width: 800,
+          height: 600,
+          frame: false,
+          alwaysOnTop: true,
+          fullscreenable: true,
+          parent: mainWindow,
+          webPreferences: {
+            nodeIntegration: false,
+            contextIsolation: true,
+            preload: path.join(__dirname, 'preload.js'),
+          },
+        },
+      };
+    }
+    return { action: 'allow' };
+  });
 
   if (!app.isPackaged) {
     mainWindow.webContents.openDevTools();

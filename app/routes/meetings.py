@@ -3,6 +3,7 @@ import json
 from flask import Blueprint, render_template, jsonify, request, send_file, abort, current_app
 from app.extensions import db
 from app.models import Meeting
+from app.config import basedir as app_basedir
 import io
 
 meetings_bp = Blueprint('meetings', __name__)
@@ -48,12 +49,16 @@ def api_get_meeting(meeting_id):
 
     entries = []
     if meeting.transcript_path:
-        filepath = os.path.join(current_app.root_path, '..', meeting.transcript_path)
+        filepath = os.path.join(app_basedir, meeting.transcript_path)
         try:
             with open(filepath, 'r', encoding='utf-8') as f:
                 data = json.load(f)
             entries = data.get('entries', [])
-        except Exception:
+            current_app.logger.info(f"Meeting {meeting_id}: loaded {len(entries)} entries from {filepath}")
+            if not entries:
+                current_app.logger.warning(f"Meeting {meeting_id}: transcript file exists but has empty entries")
+        except Exception as e:
+            current_app.logger.error(f"Meeting {meeting_id}: failed to load transcript: {e}")
             entries = []
 
     return jsonify({'meta': meta, 'entries': entries})
@@ -66,7 +71,7 @@ def api_export_meeting(meeting_id):
 
     entries = []
     if meeting.transcript_path:
-        filepath = os.path.join(current_app.root_path, '..', meeting.transcript_path)
+        filepath = os.path.join(app_basedir, meeting.transcript_path)
         try:
             with open(filepath, 'r', encoding='utf-8') as f:
                 data = json.load(f)
@@ -128,7 +133,7 @@ def api_delete_meeting(meeting_id):
     meeting = Meeting.query.get_or_404(meeting_id)
 
     if meeting.transcript_path:
-        filepath = os.path.join(current_app.root_path, '..', meeting.transcript_path)
+        filepath = os.path.join(app_basedir, meeting.transcript_path)
         try:
             if os.path.exists(filepath):
                 os.remove(filepath)
