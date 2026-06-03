@@ -1,5 +1,11 @@
 # 更新记录 / Changelog
 
+## [1.1.1] — 2026-06-03
+
+### 修复
+- **热词「新建」按钮无反应**：`translator.js` hash 路由白名单补 `'hotwords'`；`hotwords.js` 初始化加 try-catch 防护
+- hash 路由 `pages` 数组补充 `'hotwords'`（inline 脚本已补，translator.js 遗漏）
+
 ## [1.1.0] — 2026-06-03
 
 ### 新增
@@ -10,9 +16,6 @@
 
 ### 优化
 - 切换面板数据刷新扩展：切到会话设置时同时加载热词词表列表
-
-### 修复
-- hash 路由 `pages` 数组补充 `'hotwords'`，修复 `/#hotwords` 直连无法激活页面
 
 ## [1.0.0] — 2026-05-25
 
