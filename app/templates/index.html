@@ -322,6 +322,20 @@
             </div>
           </div>
 
+          <!-- Name Modal (new / rename) -->
+          <div id="hw-name-modal" class="modal-mask" style="display:none;">
+            <div class="modal-win" style="width:320px;">
+              <div class="modal-h" id="hw-name-modal-title">新建词表</div>
+              <div class="form-group">
+                <input type="text" id="hw-name-input" class="form-input" placeholder="请输入词表名称" style="width:100%;box-sizing:border-box;">
+              </div>
+              <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px;">
+                <button class="btn-nav" onclick="document.getElementById('hw-name-modal').style.display='none'">取消</button>
+                <button id="hw-name-confirm" class="btn-primary">确定</button>
+              </div>
+            </div>
+          </div>
+
           <!-- Import Modal -->
           <div id="hw-import-modal" class="modal-mask" style="display:none;">
             <div class="modal-win">

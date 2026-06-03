@@ -121,36 +121,58 @@ document.addEventListener('DOMContentLoaded', () => {
     loadTables();
   };
 
+  document.getElementById('hw-name-input').onkeydown = (e) => {
+    if (e.key === 'Enter') document.getElementById('hw-name-confirm').click();
+  };
+
   document.getElementById('hw-new-table-btn').onclick = () => {
-    const name = prompt('请输入词表名称：');
-    if (!name || !name.trim()) return;
-    fetch('/api/hotwords/tables', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: name.trim() })
-    }).then(res => {
-      if (!res.ok) { alert('创建失败'); return; }
-      return res.json();
-    }).then(t => {
-      currentTableId = t.id;
-      loadTables();
-      window._selectTable(currentTableId);
-    });
+    _hwNameMode = 'new';
+    document.getElementById('hw-name-modal-title').textContent = '新建词表';
+    document.getElementById('hw-name-input').value = '';
+    document.getElementById('hw-name-input').placeholder = '请输入词表名称';
+    document.getElementById('hw-name-modal').style.display = 'flex';
+    setTimeout(() => document.getElementById('hw-name-input').focus(), 50);
   };
 
   document.getElementById('hw-rename-table-btn').onclick = () => {
     if (!currentTableId) { alert('请先选择词表'); return; }
     const table = allTables.find(t => t.id === currentTableId);
-    const name = prompt('请输入新名称：', table ? table.name : '');
-    if (!name || !name.trim()) return;
-    fetch(`/api/hotwords/tables/${currentTableId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: name.trim() })
-    }).then(res => {
-      if (!res.ok) { alert('重命名失败'); return; }
-      loadTables();
-    });
+    _hwNameMode = 'rename';
+    document.getElementById('hw-name-modal-title').textContent = '重命名词表';
+    document.getElementById('hw-name-input').value = table ? table.name : '';
+    document.getElementById('hw-name-input').placeholder = '请输入新名称';
+    document.getElementById('hw-name-modal').style.display = 'flex';
+    setTimeout(() => document.getElementById('hw-name-input').focus(), 50);
+  };
+
+  let _hwNameMode = null;
+  document.getElementById('hw-name-confirm').onclick = () => {
+    const name = document.getElementById('hw-name-input').value.trim();
+    if (!name) return;
+    document.getElementById('hw-name-modal').style.display = 'none';
+    if (_hwNameMode === 'new') {
+      fetch('/api/hotwords/tables', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name })
+      }).then(res => {
+        if (!res.ok) { alert('创建失败'); return; }
+        return res.json();
+      }).then(t => {
+        currentTableId = t.id;
+        loadTables();
+        window._selectTable(currentTableId);
+      });
+    } else if (_hwNameMode === 'rename') {
+      fetch(`/api/hotwords/tables/${currentTableId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name })
+      }).then(res => {
+        if (!res.ok) { alert('重命名失败'); return; }
+        loadTables();
+      });
+    }
   };
 
   document.getElementById('hw-del-table-btn').onclick = () => {
