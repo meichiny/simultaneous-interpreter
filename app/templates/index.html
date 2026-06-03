@@ -539,7 +539,7 @@
 
   <script>
     (function() {
-      var pages = ['translate','session','glossary','meetings','settings'];
+      var pages = ['translate','session','glossary','hotwords','meetings','settings'];
       var hash = window.location.hash.slice(1);
       var target = pages.indexOf(hash) >= 0 ? hash : 'translate';
       document.getElementById('page-' + target).classList.add('active');
