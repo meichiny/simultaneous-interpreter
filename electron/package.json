@@ -1,6 +1,6 @@
 {
   "name": "simultaneous-interpreter",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "同声传译 - 桌面客户端",
   "main": "main.js",
   "scripts": {
