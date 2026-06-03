@@ -1,4 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
+  try {
   const page = document.getElementById('page-hotwords');
   if (!page) return;
 
@@ -246,4 +247,5 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   loadTables();
+  } catch (e) { console.error('hotwords init error:', e); }
 });

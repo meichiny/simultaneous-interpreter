@@ -1202,7 +1202,7 @@
 
         // Navigate to page from hash (e.g. /#settings from standalone pages)
         var hash = window.location.hash.slice(1);
-        if (hash && ['translate', 'session', 'glossary', 'meetings', 'settings'].indexOf(hash) >= 0) {
+        if (hash && ['translate', 'session', 'glossary', 'hotwords', 'meetings', 'settings'].indexOf(hash) >= 0) {
             switchPage(hash);
         }
     });
