@@ -1,13 +1,12 @@
 import time
 import json
 import asyncio
-import logging
 import os
 import threading
 from datetime import datetime, timezone
 from flask import request
 from flask_socketio import emit
-from app.models import Term, TermCategory, Meeting
+from app.models import Term, TermCategory, Meeting, HotWord
 from app.extensions import db
 from app.services.volcano_translator import doubao_translator
 from app.config import basedir as app_basedir
@@ -22,26 +21,26 @@ RECONNECT_INTERVAL = 600
 
 def register_socket_handlers(socketio, app):
 
-    @socketio.on('connect')
+    @socketio.on("connect")
     def handle_connect():
         sid = request.sid
-        app.logger.info(f'Client Connected: {sid}')
+        app.logger.info(f"Client Connected: {sid}")
 
-    @socketio.on('disconnect')
+    @socketio.on("disconnect")
     def handle_disconnect():
         sid = request.sid
-        app.logger.info(f'Client Disconnected: {sid}')
+        app.logger.info(f"Client Disconnected: {sid}")
         with sessions_lock:
             if sid in sessions:
                 # 设置停止事件，让 session_manager_task 处理清理和保存
-                sessions[sid]['stop_event'].set()
-                loop = sessions[sid].get('loop')
+                sessions[sid]["stop_event"].set()
+                loop = sessions[sid].get("loop")
                 if loop and loop.is_running():
                     loop.call_soon_threadsafe(loop.stop)
                 # 不要在这里删除 session，让 session_manager_task 的 finally 块来处理
-                app.logger.info(f'Session {sid} stop requested on disconnect.')
+                app.logger.info(f"Session {sid} stop requested on disconnect.")
 
-    @socketio.on('update_glossary')
+    @socketio.on("update_glossary")
     def handle_update_glossary(data):
         sid = request.sid
         with sessions_lock:
@@ -49,7 +48,7 @@ def register_socket_handlers(socketio, app):
                 return
             session_ref = sessions[sid]
 
-        new_term = data.get('term')
+        new_term = data.get("term")
         if not new_term:
             return
 
@@ -64,52 +63,105 @@ def register_socket_handlers(socketio, app):
                     db.session.flush()
 
                 exists = Term.query.filter_by(
-                    category_id=category.id,
-                    source=new_term['source']
+                    category_id=category.id, source=new_term["source"]
                 ).first()
 
                 if not exists:
                     term_entry = Term(
-                        source=new_term['source'],
-                        target=new_term['target'],
+                        source=new_term["source"],
+                        target=new_term["target"],
                         category_id=category.id,
-                        notes="会议中临时添加"
+                        notes="会议中临时添加",
                     )
                     db.session.add(term_entry)
                     db.session.commit()
                     app.logger.info(f"Persisted temp term to DB: {new_term}")
                 else:
-                    exists.target = new_term['target']
+                    exists.target = new_term["target"]
                     db.session.commit()
                     app.logger.info(f"Updated existing temp term in DB: {new_term}")
 
         except Exception as e:
             app.logger.error(f"Failed to save temp term to DB: {e}")
 
-        if 'glossary' not in session_ref['speak_config']:
-            session_ref['speak_config']['glossary'] = {}
-        if session_ref['listen_config'] and 'glossary' not in session_ref['listen_config']:
-            session_ref['listen_config']['glossary'] = {}
+        if "glossary" not in session_ref["speak_config"]:
+            session_ref["speak_config"]["glossary"] = {}
+        if (
+            session_ref["listen_config"]
+            and "glossary" not in session_ref["listen_config"]
+        ):
+            session_ref["listen_config"]["glossary"] = {}
 
-        session_ref['speak_config']['glossary'][new_term['source']] = new_term['target']
-        if session_ref['listen_config']:
-            session_ref['listen_config']['glossary'][new_term['source']] = new_term['target']
+        session_ref["speak_config"]["glossary"][new_term["source"]] = new_term["target"]
+        if session_ref["listen_config"]:
+            session_ref["listen_config"]["glossary"][new_term["source"]] = new_term[
+                "target"
+            ]
 
         app.logger.info(f"Session {sid} added term to memory. Triggering Hot Reload...")
-        if 'reload_event' in session_ref:
-            session_ref['reload_event'].set()
+        if "reload_event" in session_ref:
+            session_ref["reload_event"].set()
 
-    @socketio.on('start_session')
+    @socketio.on("update_hotwords")
+    def handle_update_hotwords(data):
+        sid = request.sid
+        with sessions_lock:
+            if sid not in sessions:
+                return
+            session_ref = sessions[sid]
+
+        table_id = data.get("table_id")
+        if not table_id:
+            app.logger.warning(f"Session {sid} update_hotwords missing table_id")
+            socketio.emit(
+                "update_hotwords_response",
+                {"success": False, "error": "缺少 table_id"},
+                to=sid,
+            )
+            return
+
+        try:
+            with app.app_context():
+                hotwords = HotWord.query.filter_by(table_id=table_id).all()
+                hotword_list = [w.word for w in hotwords] if hotwords else None
+                app.logger.info(
+                    f"Session {sid} update_hotwords loaded {len(hotword_list) if hotword_list else 0} words from table {table_id}"
+                )
+
+                session_ref["speak_config"]["hotword_list"] = hotword_list
+                session_ref["speak_config"]["hotword_table_id"] = table_id
+
+                if session_ref["listen_config"]:
+                    session_ref["listen_config"]["hotword_list"] = hotword_list
+
+                socketio.emit(
+                    "update_hotwords_response",
+                    {
+                        "success": True,
+                        "count": len(hotword_list) if hotword_list else 0,
+                    },
+                    to=sid,
+                )
+
+                if "reload_event" in session_ref:
+                    session_ref["reload_event"].set()
+        except Exception as e:
+            app.logger.error(f"Session {sid} update_hotwords error: {e}")
+            socketio.emit(
+                "update_hotwords_response", {"success": False, "error": str(e)}, to=sid
+            )
+
+    @socketio.on("start_session")
     def handle_start_session(data):
         sid = request.sid
 
         with sessions_lock:
-            if sid in sessions and not sessions[sid]['stop_event'].is_set():
+            if sid in sessions and not sessions[sid]["stop_event"].is_set():
                 app.logger.warning(f"Session {sid} already in progress")
                 return
 
-        speak_config = data.get('speak_config', {})
-        category_ids = speak_config.get('category_ids', [])
+        speak_config = data.get("speak_config", {})
+        category_ids = speak_config.get("category_ids", [])
         glossary_dict = {}
 
         if category_ids:
@@ -123,91 +175,135 @@ def register_socket_handlers(socketio, app):
 
             app.logger.info(f"Session {sid} loaded {len(glossary_dict)} terms")
 
-        speak_config['glossary'] = glossary_dict
+        speak_config["glossary"] = glossary_dict
+
+        hotword_table_id = data.get("hotword_table_id") or speak_config.get(
+            "hotword_table_id"
+        )
+        hotword_list = None
+        if hotword_table_id:
+            hotwords = HotWord.query.filter_by(table_id=hotword_table_id).all()
+            if hotwords:
+                hotword_list = [w.word for w in hotwords]
+                app.logger.info(
+                    f"Session {sid} loaded {len(hotword_list)} hotwords from table {hotword_table_id}"
+                )
+
+        if hotword_list and glossary_dict:
+            total = len(hotword_list) + len(glossary_dict)
+            if total > 1000:
+                app.logger.warning(
+                    f"Session {sid} hotwords+glossary exceeds 1000: {total}"
+                )
+                socketio.emit(
+                    "session_error",
+                    {"message": "热词与术语合计超过 1000 条上限"},
+                    to=sid,
+                )
+                return
+
+        speak_config["hotword_list"] = hotword_list
+        speak_config["hotword_table_id"] = hotword_table_id
 
         loop = asyncio.new_event_loop()
 
-        listen_config_data = data.get('listen_config')
+        listen_config_data = data.get("listen_config")
         meeting = Meeting(
-            title=datetime.now().strftime('%Y-%m-%d %H:%M') + ' 会议',
+            title=datetime.now().strftime("%Y-%m-%d %H:%M") + " 会议",
             start_time=datetime.now(timezone.utc),
-            status='recording',
-            speak_direction=speak_config.get('direction', ''),
-            listen_direction=listen_config_data.get('direction', '') if listen_config_data else ''
+            status="recording",
+            speak_direction=speak_config.get("direction", ""),
+            listen_direction=listen_config_data.get("direction", "")
+            if listen_config_data
+            else "",
         )
         db.session.add(meeting)
         db.session.commit()
 
         session_data = {
-            'speak_config': speak_config,
-            'listen_config': listen_config_data,
-            'speak_queue': asyncio.Queue(maxsize=500),
-            'listen_queue': asyncio.Queue(maxsize=500),
-            'stop_event': asyncio.Event(),
-            'reload_event': asyncio.Event(),
-            'loop': loop,
-            'start_time': time.time(),
-            'transcript': [],
-            'meeting_id': meeting.id,
-            'billing_stats': {
-                'input_audio_tokens': 0,
-                'output_text_tokens': 0,
-                'output_audio_tokens': 0,
-                'duration_msec': 0
-            }
+            "speak_config": speak_config,
+            "listen_config": listen_config_data,
+            "speak_queue": asyncio.Queue(maxsize=500),
+            "listen_queue": asyncio.Queue(maxsize=500),
+            "stop_event": asyncio.Event(),
+            "reload_event": asyncio.Event(),
+            "loop": loop,
+            "start_time": time.time(),
+            "transcript": [],
+            "meeting_id": meeting.id,
+            "billing_stats": {
+                "input_audio_tokens": 0,
+                "output_text_tokens": 0,
+                "output_audio_tokens": 0,
+                "duration_msec": 0,
+            },
         }
 
         with sessions_lock:
             sessions[sid] = session_data
 
         app.logger.info(f"Session {sid} started")
-        socketio.emit('log_update', {
-            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-            'level': 'INFO',
-            'channel': 'system',
-            'message': '会话已启动'
-        }, to=sid)
-        socketio.start_background_task(target=session_manager_task, sid=sid, loop=loop, app=app, socketio=socketio)
+        socketio.emit(
+            "log_update",
+            {
+                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "level": "INFO",
+                "channel": "system",
+                "message": "会话已启动",
+            },
+            to=sid,
+        )
+        socketio.start_background_task(
+            target=session_manager_task, sid=sid, loop=loop, app=app, socketio=socketio
+        )
 
-    @socketio.on('stop_session')
+    @socketio.on("stop_session")
     def handle_stop_session():
         sid = request.sid
         with sessions_lock:
             if sid in sessions:
-                sessions[sid]['stop_event'].set()
+                sessions[sid]["stop_event"].set()
         app.logger.info(f"Stop requested: {sid}")
-        socketio.emit('log_update', {
-            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-            'level': 'INFO',
-            'channel': 'system',
-            'message': '停止请求已接收'
-        }, to=sid)
+        socketio.emit(
+            "log_update",
+            {
+                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "level": "INFO",
+                "channel": "system",
+                "message": "停止请求已接收",
+            },
+            to=sid,
+        )
 
-    @socketio.on('audio_chunk_speak')
+    @socketio.on("audio_chunk_speak")
     def handle_audio_chunk_speak(chunk):
         sid = request.sid
         with sessions_lock:
             session = sessions.get(sid)
         if session:
             try:
-                asyncio.run_coroutine_threadsafe(session['speak_queue'].put(chunk), session['loop'])
+                asyncio.run_coroutine_threadsafe(
+                    session["speak_queue"].put(chunk), session["loop"]
+                )
             except Exception as e:
                 app.logger.warning(f"Queue Error (speak): {e}")
 
-    @socketio.on('audio_chunk_listen')
+    @socketio.on("audio_chunk_listen")
     def handle_audio_chunk_listen(chunk):
         sid = request.sid
         with sessions_lock:
             session = sessions.get(sid)
         if session:
             try:
-                asyncio.run_coroutine_threadsafe(session['listen_queue'].put(chunk), session['loop'])
+                asyncio.run_coroutine_threadsafe(
+                    session["listen_queue"].put(chunk), session["loop"]
+                )
             except Exception as e:
                 app.logger.warning(f"Queue Error (listen): {e}")
 
-    @socketio.on('ping_from_client')
+    @socketio.on("ping_from_client")
     def handle_ping(data):
-        emit('pong_from_server', data, to=request.sid)
+        emit("pong_from_server", data, to=request.sid)
 
 
 def session_manager_task(sid, loop, app, socketio):
@@ -215,8 +311,8 @@ def session_manager_task(sid, loop, app, socketio):
 
     with sessions_lock:
         session_check = sessions.get(sid)
-    if session_check and 'reload_event' not in session_check:
-        session_check['reload_event'] = asyncio.Event()
+    if session_check and "reload_event" not in session_check:
+        session_check["reload_event"] = asyncio.Event()
 
     try:
         while True:
@@ -225,80 +321,122 @@ def session_manager_task(sid, loop, app, socketio):
             if not session_data:
                 break
 
-            if session_data['stop_event'].is_set():
+            if session_data["stop_event"].is_set():
                 break
 
-            session_data['reload_event'].clear()
+            session_data["reload_event"].clear()
             current_translator_stop_event = asyncio.Event()
 
             async def run_tasks():
                 tasks = []
-                speak_config = session_data.get('speak_config', {})
-                listen_config = session_data.get('listen_config', {})
+                speak_config = session_data.get("speak_config", {})
+                listen_config = session_data.get("listen_config", {})
 
-                transcript = session_data.get('transcript', [])
-                billing_stats = session_data.get('billing_stats', {})
+                transcript = session_data.get("transcript", [])
+                billing_stats = session_data.get("billing_stats", {})
 
-                app.logger.info(f"[Socket][{sid}] run_tasks 开始, speak_config={speak_config}, listen_config={listen_config}")
+                app.logger.info(
+                    f"[Socket][{sid}] run_tasks 开始, speak_config={speak_config}, listen_config={listen_config}"
+                )
 
                 # DEBUG: 记录详细配置
-                speak_api_mode = 's2s' if speak_config.get('enable_tts', True) else 's2t'
-                socketio.emit('log_update', {
-                    'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                    'level': 'DEBUG',
-                    'channel': 'system',
-                    'message': f'speak配置: api_mode={speak_api_mode}, direction={speak_config.get("direction")}, enable_tts={speak_config.get("enable_tts", True)}'
-                }, to=sid)
+                speak_api_mode = (
+                    "s2s" if speak_config.get("enable_tts", True) else "s2t"
+                )
+                socketio.emit(
+                    "log_update",
+                    {
+                        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        "level": "DEBUG",
+                        "channel": "system",
+                        "message": f"speak配置: api_mode={speak_api_mode}, direction={speak_config.get('direction')}, enable_tts={speak_config.get('enable_tts', True)}",
+                    },
+                    to=sid,
+                )
                 if listen_config:
-                    listen_api_mode = 's2s' if listen_config.get('enable_tts', True) else 's2t'
-                    socketio.emit('log_update', {
-                        'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                        'level': 'DEBUG',
-                        'channel': 'system',
-                        'message': f'listen配置: api_mode={listen_api_mode}, direction={listen_config.get("direction")}, enable_tts={listen_config.get("enable_tts", True)}'
-                    }, to=sid)
+                    listen_api_mode = (
+                        "s2s" if listen_config.get("enable_tts", True) else "s2t"
+                    )
+                    socketio.emit(
+                        "log_update",
+                        {
+                            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                            "level": "DEBUG",
+                            "channel": "system",
+                            "message": f"listen配置: api_mode={listen_api_mode}, direction={listen_config.get('direction')}, enable_tts={listen_config.get('enable_tts', True)}",
+                        },
+                        to=sid,
+                    )
 
-                if speak_config.get('mode') == 'translate':
-                    lang_from, lang_to = speak_config.get('direction', 'zh-en').split('-')
+                hotword_list = speak_config.get("hotword_list")
+
+                if speak_config.get("mode") == "translate":
+                    lang_from, lang_to = speak_config.get("direction", "zh-en").split(
+                        "-"
+                    )
                     app.logger.info(f"[Socket][{sid}] 启动 speak 通道翻译任务")
                     # 根据 enable_tts 选择 mode: s2s(有语音) 或 s2t(无语音)
-                    speak_mode = 's2s' if speak_config.get('enable_tts', True) else 's2t'
-                    tasks.append(doubao_translator(
-                        socketio, sid, lang_from, lang_to,
-                        session_data['speak_queue'], current_translator_stop_event,
-                        'speak', speak_mode, glossary=speak_config.get('glossary'),
-                        speaker_id=speak_config.get('speaker_id', ''),
-                        transcript_collector=transcript,
-                        billing_collector=billing_stats
-                    ))
+                    speak_mode = (
+                        "s2s" if speak_config.get("enable_tts", True) else "s2t"
+                    )
+                    tasks.append(
+                        doubao_translator(
+                            socketio,
+                            sid,
+                            lang_from,
+                            lang_to,
+                            session_data["speak_queue"],
+                            current_translator_stop_event,
+                            "speak",
+                            speak_mode,
+                            glossary=speak_config.get("glossary"),
+                            speaker_id=speak_config.get("speaker_id", ""),
+                            transcript_collector=transcript,
+                            billing_collector=billing_stats,
+                            hotwords=hotword_list,
+                        )
+                    )
 
-                if listen_config and listen_config.get('mode') == 'translate':
-                    lang_from, lang_to = listen_config.get('direction', 'en-zh').split('-')
+                if listen_config and listen_config.get("mode") == "translate":
+                    lang_from, lang_to = listen_config.get("direction", "en-zh").split(
+                        "-"
+                    )
                     # 根据 enable_tts 选择 mode
-                    listen_mode = 's2s' if listen_config.get('enable_tts', True) else 's2t'
-                    tasks.append(doubao_translator(
-                        socketio, sid, lang_from, lang_to,
-                        session_data['listen_queue'], current_translator_stop_event,
-                        'listen', listen_mode, glossary=listen_config.get('glossary'),
-                        speaker_id=listen_config.get('speaker_id', ''),
-                        transcript_collector=transcript,
-                        billing_collector=billing_stats
-                    ))
+                    listen_mode = (
+                        "s2s" if listen_config.get("enable_tts", True) else "s2t"
+                    )
+                    tasks.append(
+                        doubao_translator(
+                            socketio,
+                            sid,
+                            lang_from,
+                            lang_to,
+                            session_data["listen_queue"],
+                            current_translator_stop_event,
+                            "listen",
+                            listen_mode,
+                            glossary=listen_config.get("glossary"),
+                            speaker_id=listen_config.get("speaker_id", ""),
+                            transcript_collector=transcript,
+                            billing_collector=billing_stats,
+                            hotwords=hotword_list,
+                        )
+                    )
 
                 async def monitor_signals():
                     elapsed = 0.0
                     while not current_translator_stop_event.is_set():
-                        if session_data['stop_event'].is_set():
+                        if session_data["stop_event"].is_set():
                             current_translator_stop_event.set()
                             return
-                        if session_data['reload_event'].is_set():
+                        if session_data["reload_event"].is_set():
                             current_translator_stop_event.set()
                             return
                         await asyncio.sleep(0.1)
                         elapsed += 0.1
                         if elapsed >= RECONNECT_INTERVAL:
                             app.logger.info(f"Session {sid} 定时重连触发")
-                            session_data['reload_event'].set()
+                            session_data["reload_event"].set()
                             current_translator_stop_event.set()
                             return
 
@@ -308,21 +446,33 @@ def session_manager_task(sid, loop, app, socketio):
                         await asyncio.sleep(5)
                         if current_translator_stop_event.is_set():
                             break
-                        stats = session_data.get('billing_stats', {})
+                        stats = session_data.get("billing_stats", {})
                         total_tokens = (
-                            stats.get('input_audio_tokens', 0) +
-                            stats.get('output_text_tokens', 0) +
-                            stats.get('output_audio_tokens', 0)
+                            stats.get("input_audio_tokens", 0)
+                            + stats.get("output_text_tokens", 0)
+                            + stats.get("output_audio_tokens", 0)
                         )
-                        duration_sec = stats.get('duration_msec', 0) / 1000
-                        socketio.emit('billing_update', {
-                            'total_tokens': int(total_tokens),
-                            'duration_sec': round(duration_sec, 1),
-                            'input_audio_tokens': int(stats.get('input_audio_tokens', 0)),
-                            'output_text_tokens': int(stats.get('output_text_tokens', 0)),
-                            'output_audio_tokens': int(stats.get('output_audio_tokens', 0))
-                        }, to=sid)
-                        app.logger.info(f"Session {sid} billing_update 已发送: {int(total_tokens)} tokens, {round(duration_sec, 1)}s")
+                        duration_sec = stats.get("duration_msec", 0) / 1000
+                        socketio.emit(
+                            "billing_update",
+                            {
+                                "total_tokens": int(total_tokens),
+                                "duration_sec": round(duration_sec, 1),
+                                "input_audio_tokens": int(
+                                    stats.get("input_audio_tokens", 0)
+                                ),
+                                "output_text_tokens": int(
+                                    stats.get("output_text_tokens", 0)
+                                ),
+                                "output_audio_tokens": int(
+                                    stats.get("output_audio_tokens", 0)
+                                ),
+                            },
+                            to=sid,
+                        )
+                        app.logger.info(
+                            f"Session {sid} billing_update 已发送: {int(total_tokens)} tokens, {round(duration_sec, 1)}s"
+                        )
 
                 tasks.append(monitor_signals())
                 tasks.append(billing_reporter())
@@ -331,8 +481,8 @@ def session_manager_task(sid, loop, app, socketio):
 
             loop.run_until_complete(run_tasks())
 
-            if session_data['reload_event'].is_set():
-                for q_name in ['speak_queue', 'listen_queue']:
+            if session_data["reload_event"].is_set():
+                for q_name in ["speak_queue", "listen_queue"]:
                     q = session_data[q_name]
                     while not q.empty():
                         try:
@@ -351,17 +501,17 @@ def session_manager_task(sid, loop, app, socketio):
         end_time = time.time()
         with sessions_lock:
             session_info = sessions.get(sid, {})
-        start_time = session_info.get('start_time', end_time)
+        start_time = session_info.get("start_time", end_time)
         duration = int(end_time - start_time)
 
-        transcript = session_info.get('transcript', [])
-        meeting_id = session_info.get('meeting_id')
+        transcript = session_info.get("transcript", [])
+        meeting_id = session_info.get("meeting_id")
 
         with app.app_context():
             # 保存会议记录
             if meeting_id:
                 try:
-                    meetings_dir = os.path.join(app_basedir, 'meetings')
+                    meetings_dir = os.path.join(app_basedir, "meetings")
                     os.makedirs(meetings_dir, exist_ok=True)
                     transcript_path_rel = None
 
@@ -369,22 +519,28 @@ def session_manager_task(sid, loop, app, socketio):
                         filename = f"meeting_{meeting_id}_{int(end_time)}.json"
                         filepath = os.path.join(meetings_dir, filename)
                         transcript_data = {
-                            'meeting_id': meeting_id,
-                            'speak_direction': session_info.get('speak_config', {}).get('direction', ''),
-                            'listen_direction': (session_info.get('listen_config') or {}).get('direction', ''),
-                            'entries': transcript
+                            "meeting_id": meeting_id,
+                            "speak_direction": session_info.get("speak_config", {}).get(
+                                "direction", ""
+                            ),
+                            "listen_direction": (
+                                session_info.get("listen_config") or {}
+                            ).get("direction", ""),
+                            "entries": transcript,
                         }
-                        with open(filepath, 'w', encoding='utf-8') as f:
+                        with open(filepath, "w", encoding="utf-8") as f:
                             json.dump(transcript_data, f, ensure_ascii=False, indent=2)
                         transcript_path_rel = f"meetings/{filename}"
-                        app.logger.info(f"Meeting {meeting_id} transcript saved: {filename} ({len(transcript)} entries)")
+                        app.logger.info(
+                            f"Meeting {meeting_id} transcript saved: {filename} ({len(transcript)} entries)"
+                        )
 
                     meeting = db.session.get(Meeting, meeting_id)
                     if meeting:
                         meeting.end_time = datetime.now(timezone.utc)
                         meeting.duration_seconds = duration
                         meeting.transcript_path = transcript_path_rel
-                        meeting.status = 'completed'
+                        meeting.status = "completed"
                         db.session.commit()
                 except Exception as e:
                     app.logger.error(f"Failed to save meeting {meeting_id}: {e}")
@@ -398,11 +554,15 @@ def session_manager_task(sid, loop, app, socketio):
         except Exception:
             pass
 
-        socketio.emit('session_stopped', to=sid)
+        socketio.emit("session_stopped", to=sid)
         app.logger.info(f"Session {sid} stopped completely")
-        socketio.emit('log_update', {
-            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-            'level': 'INFO',
-            'channel': 'system',
-            'message': '会话已完全停止'
-        }, to=sid)
+        socketio.emit(
+            "log_update",
+            {
+                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "level": "INFO",
+                "channel": "system",
+                "message": "会话已完全停止",
+            },
+            to=sid,
+        )

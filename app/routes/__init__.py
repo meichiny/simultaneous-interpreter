@@ -2,6 +2,7 @@ from app.routes.main import main_bp
 from app.routes.glossary import glossary_bp
 from app.routes.meetings import meetings_bp
 from app.routes.logs import logs_bp
+from app.routes.hotwords import hotwords_bp
 
 
 def register_blueprints(app):
@@ -9,3 +10,4 @@ def register_blueprints(app):
     app.register_blueprint(glossary_bp)
     app.register_blueprint(meetings_bp)
     app.register_blueprint(logs_bp)
+    app.register_blueprint(hotwords_bp)
