@@ -57,6 +57,10 @@
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
         <span class="sidebar-label">词库</span>
       </div>
+      <div class="sidebar-item" data-page="hotwords" onclick="switchPage('hotwords')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20V10M18 20V4M6 20v-4"/></svg>
+        <span class="sidebar-label">热词</span>
+      </div>
       <div class="sidebar-item" data-page="meetings" onclick="switchPage('meetings')">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
         <span class="sidebar-label">会议</span>
@@ -81,6 +85,7 @@
               <div class="config-row"><span class="config-label">麦克风</span><span class="config-value" id="ov-mic">未选择</span></div>
               <div class="config-row"><span class="config-label">语音输出</span><span class="config-value" id="ov-tts">已启用</span></div>
               <div class="config-row"><span class="config-label">术语库</span><span class="config-value" id="ov-glossary">未选择</span></div>
+              <div class="config-row"><span class="config-label">热词词表</span><span class="config-value" id="ov-hotwords">未选择</span></div>
               <div class="config-row" style="border-top-color:var(--border-strong);margin-top:8px;padding-top:12px;">
                 <span class="config-label">服务器</span>
                 <span class="config-value" id="ov-server"><span class="status-dot yellow" style="display:inline-block;margin-right:6px;vertical-align:middle"></span>连接中...</span>
@@ -234,6 +239,16 @@
             <div style="margin-top:8px;font-size:10px;color:var(--text-muted);">选择的术语将在开始翻译时应用到会话中。勾选多个分类可合并使用。</div>
           </div>
 
+          <!-- Hotwords Section -->
+          <div class="form-section">
+            <div class="form-section-title">热词词表 / Hot Words</div>
+            <select id="hw-table-select" class="form-input" onchange="onHotwordTableChange()">
+              <option value="">不启用（默认）</option>
+            </select>
+            <div id="hw-select-info" style="margin-top:4px;font-size:10px;color:var(--text-muted);"></div>
+            <div style="margin-top:8px;font-size:10px;color:var(--text-muted);">每次只能选择一张热词词表，热词与术语合计不超过 1000 条。</div>
+          </div>
+
           <!-- Display Section -->
           <div class="form-section">
             <div class="form-section-title">投屏样式 / Display</div>
@@ -272,6 +287,60 @@
             <div style="display:flex;gap:8px;">
               <button class="btn btn-secondary" onclick="resetDisplaySettings()" style="flex:1;">重置默认 / Reset</button>
               <button class="btn btn-secondary" onclick="previewDisplaySettings()" style="flex:1;">预览 / Preview</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Page: Hotwords -->
+      <div class="page" id="page-hotwords">
+        <div class="page-header">热词 / Hot Words</div>
+        <div class="page-content" style="padding:0;overflow:hidden;">
+          <div class="workspace">
+            <div class="col col-cats">
+              <div class="col-header">
+                词表列表
+                <button class="header-btn" id="hw-new-table-btn">新建</button>
+                <button class="header-btn" id="hw-rename-table-btn">重命名</button>
+                <button class="header-btn danger" id="hw-del-table-btn">删除</button>
+              </div>
+              <div class="scroll-area" id="hw-tables"><div class="placeholder">加载中...</div></div>
+            </div>
+            <div class="col col-list" style="flex:2;">
+              <div class="col-header">
+                热词明细
+                <div class="header-actions" style="display:flex;gap:8px;">
+                  <button class="header-btn danger" id="hw-del-selected" style="display:none;" disabled>删除选中</button>
+                  <button class="header-btn" id="hw-import-btn">批量导入</button>
+                  <button class="header-btn" id="hw-add-word-btn">添加</button>
+                </div>
+              </div>
+              <div class="hw-add-row">
+                <input type="text" id="hw-add-word-input" class="form-input" placeholder="输入热词，回车添加">
+              </div>
+              <div class="scroll-area" id="hw-words"><div class="placeholder">请选择一个词表</div></div>
+            </div>
+          </div>
+
+          <!-- Import Modal -->
+          <div id="hw-import-modal" class="modal-mask" style="display:none;">
+            <div class="modal-win">
+              <div class="modal-h">
+                批量导入热词
+                <span class="modal-close" id="hw-import-close">&times;</span>
+              </div>
+              <div class="form-group">
+                <label class="form-label">粘贴热词（每行一个）</label>
+                <textarea id="hw-import-text" class="form-input" rows="8" placeholder="热词1&#10;热词2&#10;热词3" style="width:100%;resize:vertical;"></textarea>
+              </div>
+              <div class="form-group">
+                <label class="form-label">或上传 .txt 文件</label>
+                <input type="file" id="hw-import-file" accept=".txt" class="form-input" style="padding:8px;">
+              </div>
+              <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px;">
+                <button class="btn-nav" onclick="document.getElementById('hw-import-modal').style.display='none'">取消</button>
+                <button id="hw-import-submit" class="btn-primary">开始导入</button>
+              </div>
             </div>
           </div>
         </div>
@@ -462,6 +531,7 @@
   <script src="/static/js/utils.js"></script>
   <script src="/static/js/translator.js"></script>
   <script src="/static/js/glossary.js"></script>
+  <script src="/static/js/hotwords.js"></script>
   <script src="/static/js/meetings.js"></script>
   <script src="/static/js/logs.js"></script>
 

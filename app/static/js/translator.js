@@ -19,6 +19,9 @@
         if (pageName === 'session' && window.loadGlossary) {
             window.loadGlossary();
         }
+        if (pageName === 'session' && window.loadHotwordTables) {
+            window.loadHotwordTables();
+        }
     };
 
     window.openDisplayWindow = function() {
@@ -58,6 +61,7 @@
         var hasKey = window.__HAS_API_KEY__;
         var ovApiKey = document.getElementById('ov-apikey');
         if (ovApiKey) ovApiKey.textContent = hasKey ? '✅ 已配置' : '❌ 未配置';
+        updateHotwordOverview();
     }
 
     // --- 平台检测 ---
@@ -67,6 +71,7 @@
     })();
 
     const socket = io();
+    window._getSocket = () => socket;
     let currentLatency = 0;
     
     let isRunning = false;
@@ -389,6 +394,48 @@
         } catch (e) { console.error('Glossary Error', e); }
     }
     window.loadGlossary = loadGlossary;
+
+    async function loadHotwordTables() {
+        const select = document.getElementById('hw-table-select');
+        if (!select) return;
+        try {
+            const res = await fetch('/api/hotwords/tables');
+            const tables = await res.json();
+            const currentVal = select.value;
+            select.innerHTML = '<option value="">不启用（默认）</option>' +
+                tables.map(t => `<option value="${t.id}">${escHtml(t.name)} (${t.word_count}词)</option>`).join('');
+            if (currentVal && tables.find(t => t.id == currentVal)) select.value = currentVal;
+            updateHotwordInfo();
+        } catch (e) { console.error('Load hotword tables error', e); }
+    }
+    window.loadHotwordTables = loadHotwordTables;
+
+    window.onHotwordTableChange = function() {
+        updateHotwordInfo();
+        updateHotwordOverview();
+    };
+
+    function updateHotwordInfo() {
+        const select = document.getElementById('hw-table-select');
+        const info = document.getElementById('hw-select-info');
+        if (!select || !info) return;
+        const selected = select.options[select.selectedIndex];
+        info.textContent = selected && select.value ? `已选择：${selected.text}` : '';
+    }
+
+    function updateHotwordOverview() {
+        const select = document.getElementById('hw-table-select');
+        const ov = document.getElementById('ov-hotwords');
+        if (!select || !ov) return;
+        const selected = select.options[select.selectedIndex];
+        ov.textContent = selected && select.value ? selected.text : '未选择';
+    }
+
+    function escHtml(s) {
+        const d = document.createElement('div');
+        d.textContent = s;
+        return d.innerHTML;
+    }
 
     // --- 显示设置配置 ---
     const defaultDisplaySettings = {
@@ -854,7 +901,9 @@
             const catIds = Array.from(document.querySelectorAll('.glossary-item input:checked')).map(c => parseInt(c.value));
             const voiceSpeak = document.getElementById('voice-speak');
             const voiceListen = document.getElementById('voice-listen');
+            const hwTableId = document.getElementById('hw-table-select').value;
             const speakCfg = { mode: 'translate', direction: apiDirSpeak, deviceId: deviceIds.mic, category_ids: catIds, speaker_id: voiceSpeak ? voiceSpeak.value : '', enable_tts: ttsConfig.speak };
+            if (hwTableId) speakCfg.hotword_table_id = parseInt(hwTableId);
             const listenCfg = hasCableB ? { mode: 'translate', direction: apiDirListen, deviceId: virtualCables.cableB_Output_Id, category_ids: [], speaker_id: voiceListen ? voiceListen.value : '', enable_tts: ttsConfig.listen } : null;
             lastSessionPayload = { speak_config: speakCfg, listen_config: listenCfg };
             socket.emit('start_session', lastSessionPayload);
@@ -1143,6 +1192,7 @@
         try { await navigator.mediaDevices.getUserMedia({ audio: true }); } catch (e) { alert('请允许麦克风权限 / Please Allow Mic Permission'); }
         await initDevices();
         loadGlossary();
+        loadHotwordTables();
         bindSocketEvents();
         updateConfigOverview();
         document.getElementById('lang-my-speak')?.addEventListener('change', updateConfigOverview);
