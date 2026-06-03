@@ -67,10 +67,19 @@ async function startPythonServer(dataDir) {
   if (serverPath) {
     pythonProcess = spawn(serverPath, [], { env, stdio: ['ignore', 'pipe', 'pipe'] });
   } else {
-    let pythonCmd = process.platform === 'win32' ? 'python' : 'python3';
-    const venvPython = path.join(projectRoot, '.venv', 'bin', 'python3');
-    if (!app.isPackaged && fs.existsSync(venvPython)) {
-      pythonCmd = venvPython;
+    let pythonCmd;
+    if (process.platform === 'win32') {
+      pythonCmd = 'python';
+      if (!app.isPackaged) {
+        const venvPythonWin = path.join(projectRoot, '.venv', 'Scripts', 'python.exe');
+        if (fs.existsSync(venvPythonWin)) pythonCmd = venvPythonWin;
+      }
+    } else {
+      pythonCmd = 'python3';
+      if (!app.isPackaged) {
+        const venvPythonUnix = path.join(projectRoot, '.venv', 'bin', 'python3');
+        if (fs.existsSync(venvPythonUnix)) pythonCmd = venvPythonUnix;
+      }
     }
     pythonProcess = spawn(pythonCmd, ['wsgi.py'], {
       cwd: projectRoot,
@@ -123,7 +132,7 @@ function createWindow() {
     width: 1280, height: 800,
     minWidth: 900, minHeight: 600,
     title: '同声传译',
-    titleBarStyle: 'hiddenInset',
+    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -173,11 +182,12 @@ function createWindow() {
 }
 
 function buildMenu() {
+  const isMac = process.platform === 'darwin';
   const template = [
-    {
+    ...(isMac ? [{
       label: '同声传译',
       submenu: [{ role: 'about' }, { type: 'separator' }, { role: 'quit' }],
-    },
+    }] : []),
     {
       label: '编辑',
       submenu: [{ role: 'undo' }, { role: 'redo' }, { type: 'separator' }, { role: 'cut' }, { role: 'copy' }, { role: 'paste' }],
@@ -209,12 +219,16 @@ app.whenReady().then(async () => {
 
 app.on('before-quit', () => {
   if (pythonProcess) {
-    pythonProcess.kill('SIGTERM');
-    setTimeout(() => {
-      if (pythonProcess && !pythonProcess.killed) {
-        pythonProcess.kill('SIGKILL');
-      }
-    }, 3000).unref();
+    if (process.platform === 'win32') {
+      pythonProcess.kill();
+    } else {
+      pythonProcess.kill('SIGTERM');
+      setTimeout(() => {
+        if (pythonProcess && !pythonProcess.killed) {
+          pythonProcess.kill('SIGKILL');
+        }
+      }, 3000).unref();
+    }
   }
 });
 

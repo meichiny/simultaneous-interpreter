@@ -530,7 +530,7 @@ def session_manager_task(sid, loop, app, socketio):
                         }
                         with open(filepath, "w", encoding="utf-8") as f:
                             json.dump(transcript_data, f, ensure_ascii=False, indent=2)
-                        transcript_path_rel = f"meetings/{filename}"
+                        transcript_path_rel = os.path.join("meetings", filename).replace("\\", "/")
                         app.logger.info(
                             f"Meeting {meeting_id} transcript saved: {filename} ({len(transcript)} entries)"
                         )

@@ -6,8 +6,10 @@
   "scripts": {
     "dev": "electron .",
     "build:python": "bash ../scripts/build_python.sh",
+    "build:python:win": "powershell -ExecutionPolicy Bypass -File ../scripts/build_python.ps1",
     "build": "npm run build:python && electron-builder",
-    "build:mac": "npm run build:python && electron-builder --mac"
+    "build:mac": "npm run build:python && electron-builder --mac",
+    "build:win": "npm run build:python:win && electron-builder --win"
   },
   "devDependencies": {
     "electron": "^33.0.0",
@@ -39,7 +41,14 @@
     },
     "nsis": {
       "oneClick": false,
-      "allowToChangeInstallationDirectory": true
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "resources/icon.ico",
+      "uninstallerIcon": "resources/icon.ico",
+      "installerHeaderIcon": "resources/icon.ico",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "同声传译",
+      "language": "2052"
     }
   }
 }

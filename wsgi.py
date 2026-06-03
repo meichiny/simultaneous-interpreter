@@ -22,7 +22,8 @@ if __name__ == '__main__':
             pass
         os._exit(0)
 
-    signal.signal(signal.SIGTERM, handle_sigterm)
+    if hasattr(signal, 'SIGTERM'):
+        signal.signal(signal.SIGTERM, handle_sigterm)
 
     socketio.run(
         app,
